@@ -12,7 +12,7 @@
 #define FRAMEBUFFER_DEBUG       OFF             /* Log framebuffer operations to UART */
 #define POSTMAN_DEBUG           OFF             /* Log mailbox operations to UART */
 #define HEARTBEAT_FREQUENCY     1               /* Status led blink frequency in Hz */
-#define FONT_HEIGHT             16              /* Height of font in pixels (8/14/16 are predefined, otherwise define matching G_FONT_GLYPHS in binary_assets.s) */
+#define FONT_HEIGHT             20              /* Height of font in pixels */
 #define SCREEN_LINES            0               /* Lines of text per screen, 0 means maximum possible determined by font size */
 
 

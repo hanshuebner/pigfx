@@ -56,6 +56,9 @@ pigfx.elf : $(SRC_DIR)/pigfx_config.h $(OBJS)
 	@$(ARMGNU)-ld $(OBJS) $(LIBGCC) $(LIBUSPI) -T memmap -o $@
 	@echo "LD $@"
 
+install: kernel
+	cp bin/kernel.img /Volumes/PIGFX/
+	diskutil umountdisk PIGFX
 
 .PHONY clean :
 	rm -f $(SRC_DIR)/pigfx_config.h

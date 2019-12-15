@@ -298,8 +298,8 @@ void initialize_framebuffer()
     unsigned int fbsize;
     unsigned int pitch;
 
-    unsigned int p_w = 640;
-    unsigned int p_h = 480;
+    unsigned int p_w = 800;
+    unsigned int p_h = 600;
     unsigned int v_w = p_w;
     unsigned int v_h = p_h;
 
