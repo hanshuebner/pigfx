@@ -561,12 +561,6 @@ gfx_term_putstring(const char* str)
       case 0x07: // skip BELL
         break;
 
-      case 0x0c:
-        /* new page */
-        gfx_term_move_cursor(0, 0);
-        gfx_term_clear_screen();
-        break;
-
       default:
         ctx.term.state.next(*str, &(ctx.term.state));
         break;
