@@ -567,8 +567,7 @@ gfx_term_putstring(const char* str)
     }
 
     if (ctx.term.cursor_col >= ctx.term.columns) {
-      ++ctx.term.cursor_row;
-      ctx.term.cursor_col = 0;
+      ctx.term.cursor_col = ctx.term.columns - 1;
     }
 
     if (ctx.term.cursor_row >= ctx.term.rows) {
