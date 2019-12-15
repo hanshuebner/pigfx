@@ -87,7 +87,9 @@ typedef struct
 
   GFX_COL bg;
   GFX_COL fg;
+  GFX_COL cursor_color;
   unsigned int inverse;
+  unsigned char line_attributes[255];
 
   unsigned int line_limit;
 
@@ -95,7 +97,7 @@ typedef struct
   int font_width;
   unsigned char* font_data;
 
-  unsigned int cursor_buffer[32 * 2];
+  unsigned char cursor_buffer[10 * 20];
 
 } FRAMEBUFFER_CTX;
 
@@ -211,8 +213,13 @@ gfx_set_env(void* p_framebuffer,
 
   ctx.bg = 0;
   ctx.fg = 15;
+  ctx.cursor_color = 9;
   ctx.inverse = 0;
   ctx.line_limit = SCREEN_LINES;
+
+  for (unsigned int i = 0; i < sizeof(ctx.line_attributes); i++) {
+    ctx.line_attributes[i] = 0;
+  }
 
   gfx_set_font_height(FONT_HEIGHT);
 }
@@ -460,8 +467,7 @@ gfx_putc(unsigned int row, unsigned int col, unsigned char c)
   if (row >= ctx.term.rows)
     return;
 
-  unsigned char* p_glyph =
-    (unsigned char*)(ctx.font_data + (c * ctx.font_width * ctx.font_height));
+  unsigned char* p_glyph = (unsigned char*)(ctx.font_data + (c * ctx.font_width * ctx.font_height));
   unsigned char* pf = PFB((col * ctx.font_width), (row * ctx.font_height));
 
   for (int y = 0; y < ctx.font_height; y++) {
@@ -481,18 +487,16 @@ void
 gfx_restore_cursor_content()
 {
   // Restore framebuffer content that was overwritten by the cursor
-  unsigned int* pb = (unsigned int*)ctx.cursor_buffer;
-  unsigned int* pfb = (unsigned int*)PFB(ctx.term.cursor_col * ctx.font_width,
-                                         ctx.term.cursor_row * ctx.font_height);
-  const unsigned int stride = (ctx.pitch >> 2) - 2;
-  unsigned int h = ctx.font_height;
-  while (h--) {
-    *pfb++ = *pb++;
-    *pfb++ = *pb++;
-    pfb += stride;
+  unsigned char* pb = ctx.cursor_buffer;
+  unsigned char* pfb = PFB(ctx.term.cursor_col * ctx.font_width,
+                           ctx.term.cursor_row * ctx.font_height);
+  
+  for (int y = 0; y < ctx.font_height; y++) {
+    for (int x = 0; x < ctx.font_width; x++) {
+      pfb[x] = *pb++;
+    }
+    pfb += ctx.pitch;
   }
-  // cout("cursor
-  // restored");cout_d(ctx.term.cursor_row);cout("-");cout_d(ctx.term.cursor_col);cout_endl();
 }
 
 void
@@ -504,41 +508,17 @@ gfx_term_render_cursor()
   while (DMA_CHAN0_BUSY)
     ; // Busy wait for DMA
 
-  unsigned char* p;
-  unsigned int* pb = (unsigned int*)ctx.cursor_buffer;
-  unsigned int* pfb = (unsigned int*)PFB(ctx.term.cursor_col * ctx.font_width,
-                                         ctx.term.cursor_row * ctx.font_height);
-  const unsigned int stride = (ctx.pitch >> 2) - 2;
-  unsigned int h = ctx.font_height;
-
-  if (ctx.term.cursor_visible)
-    while (h--) {
-      //*pb++ = *pfb; *pfb = ~*pfb; pfb++;
-      //*pb++ = *pfb; *pfb = ~*pfb; pfb++;
-      *pb++ = *pfb;
-      p = (unsigned char*)pfb;
-      p[0] = (p[0] == ctx.fg) ? ctx.bg : ((p[0] == ctx.bg) ? ctx.fg : ~p[0]);
-      p[1] = (p[1] == ctx.fg) ? ctx.bg : ((p[1] == ctx.bg) ? ctx.fg : ~p[1]);
-      p[2] = (p[2] == ctx.fg) ? ctx.bg : ((p[2] == ctx.bg) ? ctx.fg : ~p[2]);
-      p[3] = (p[3] == ctx.fg) ? ctx.bg : ((p[3] == ctx.bg) ? ctx.fg : ~p[3]);
-      pfb++;
-
-      *pb++ = *pfb;
-      p = (unsigned char*)pfb;
-      p[0] = (p[0] == ctx.fg) ? ctx.bg : ((p[0] == ctx.bg) ? ctx.fg : ~p[0]);
-      p[1] = (p[1] == ctx.fg) ? ctx.bg : ((p[1] == ctx.bg) ? ctx.fg : ~p[1]);
-      p[2] = (p[2] == ctx.fg) ? ctx.bg : ((p[2] == ctx.bg) ? ctx.fg : ~p[2]);
-      p[3] = (p[3] == ctx.fg) ? ctx.bg : ((p[3] == ctx.bg) ? ctx.fg : ~p[3]);
-      pfb++;
-
-      pfb += stride;
+  unsigned char* pb = ctx.cursor_buffer;
+  unsigned char* pfb = PFB(ctx.term.cursor_col * ctx.font_width,
+                           ctx.term.cursor_row * ctx.font_height);
+  
+  for (int y = 0; y < ctx.font_height; y++) {
+    for (int x = 0; x < ctx.font_width; x++) {
+      *pb++ = pfb[x];
+      pfb[x] = ctx.cursor_color;
     }
-  else
-    while (h--) {
-      *pb++ = *pfb++;
-      *pb++ = *pfb++;
-      pfb += stride;
-    }
+    pfb += ctx.pitch;
+  }
 }
 
 void
@@ -1030,6 +1010,19 @@ state_fun_selectescape(char ch, scn_state* state)
 }
 
 void
+state_fun_double(char ch, scn_state* state)
+{
+  if (ch == '3') {
+    // double height top
+  } else if (ch == '4') {
+    // double height bottom
+  } else if (ch == '5') {
+    // normal
+  }
+  state->next = state_fun_normaltext;
+}
+
+void
 state_fun_waitsquarebracket(char ch, scn_state* state)
 {
   if (ch == '[') {
@@ -1037,8 +1030,11 @@ state_fun_waitsquarebracket(char ch, scn_state* state)
     state->private_mode_char = 0; /* reset private mode char */
     state->next = state_fun_selectescape;
     return;
-  } else if (ch == TERM_ESCAPE_CHAR) // Double ESCAPE prints the ESC character
-  {
+  } else if (ch == '#') {
+    state->next = state_fun_double;
+    return;
+  } else if (ch == TERM_ESCAPE_CHAR) {
+     // Double ESCAPE prints the ESC character
     gfx_putc(ctx.term.cursor_row, ctx.term.cursor_col, ch);
     ++ctx.term.cursor_col;
     gfx_term_render_cursor();
