@@ -541,7 +541,6 @@ gfx_term_putstring(const char* str)
 
       case '\n':
         ++ctx.term.cursor_row;
-        ctx.term.cursor_col = 0;
         break;
 
       case 0x09: /* tab */
@@ -551,14 +550,9 @@ gfx_term_putstring(const char* str)
         break;
 
       case 0x08:
-      case 0x7F:
         /* backspace */
         if (ctx.term.cursor_col > 0) {
           --ctx.term.cursor_col;
-          gfx_clear_rect(ctx.term.cursor_col * ctx.font_width,
-                         ctx.term.cursor_row * ctx.font_height,
-                         ctx.font_width,
-                         ctx.font_height);
         }
         break;
 
