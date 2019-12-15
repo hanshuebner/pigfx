@@ -521,66 +521,44 @@ gfx_term_render_cursor()
   }
 }
 
-void
-gfx_term_render_cursor_newline_dma()
-{
-  // Fill cursor buffer with the current background and framebuffer with fg
-  unsigned int BG = GET_BG32(ctx);
-
-  unsigned int nwords = ctx.font_height * 2;
-  unsigned int* pb = (unsigned int*)ctx.cursor_buffer;
-  while (nwords--) {
-    *pb++ = BG;
-  }
-
-  if (ctx.term.cursor_visible)
-    gfx_fill_rect_dma(ctx.term.cursor_col * ctx.font_width,
-                      ctx.term.cursor_row * ctx.font_height,
-                      ctx.font_width,
-                      ctx.font_height);
-}
+/* gfx_term_putstring is the main entry point to the terminal
+ * emulator.  Everything that is displayed on the screen goes through
+ * this function */
 
 void
 gfx_term_putstring(const char* str)
 {
+  gfx_restore_cursor_content();
+
   while (*str) {
     while (DMA_CHAN0_BUSY)
       ; // Busy wait for DMA
 
     switch (*str) {
       case '\r':
-        gfx_restore_cursor_content();
         ctx.term.cursor_col = 0;
-        gfx_term_render_cursor();
         break;
 
       case '\n':
-        gfx_restore_cursor_content();
         ++ctx.term.cursor_row;
         ctx.term.cursor_col = 0;
-        gfx_term_render_cursor();
         break;
 
       case 0x09: /* tab */
-        gfx_restore_cursor_content();
         ctx.term.cursor_col += 1;
-        ctx.term.cursor_col = MIN(ctx.term.cursor_col + ctx.font_width -
-                                    ctx.term.cursor_col % ctx.font_width,
+        ctx.term.cursor_col = MIN(ctx.term.cursor_col + ctx.font_width - ctx.term.cursor_col % ctx.font_width,
                                   ctx.term.columns - 1);
-        gfx_term_render_cursor();
         break;
 
       case 0x08:
       case 0x7F:
         /* backspace */
         if (ctx.term.cursor_col > 0) {
-          gfx_restore_cursor_content();
           --ctx.term.cursor_col;
           gfx_clear_rect(ctx.term.cursor_col * ctx.font_width,
                          ctx.term.cursor_row * ctx.font_height,
                          ctx.font_width,
                          ctx.font_height);
-          gfx_term_render_cursor();
         }
         break;
 
@@ -601,23 +579,20 @@ gfx_term_putstring(const char* str)
     }
 
     if (ctx.term.cursor_col >= ctx.term.columns) {
-      gfx_restore_cursor_content();
       ++ctx.term.cursor_row;
       ctx.term.cursor_col = 0;
-      gfx_term_render_cursor();
     }
 
     if (ctx.term.cursor_row >= ctx.term.rows) {
-      gfx_restore_cursor_content();
       --ctx.term.cursor_row;
 
       gfx_scroll_down_dma(ctx.font_height);
-      gfx_term_render_cursor_newline_dma();
       dma_execute_queue();
     }
 
     ++str;
   }
+  gfx_term_render_cursor();
 }
 
 void
@@ -629,12 +604,8 @@ gfx_term_set_cursor_visibility(unsigned char visible)
 void
 gfx_term_move_cursor(int row, int col)
 {
-  gfx_restore_cursor_content();
-
   ctx.term.cursor_row = MIN(ctx.term.rows - 1, row > 0 ? row : 0);
   ctx.term.cursor_col = MIN(ctx.term.columns - 1, col > 0 ? col : 0);
-
-  gfx_term_render_cursor();
 }
 
 void
@@ -647,10 +618,8 @@ gfx_term_save_cursor()
 void
 gfx_term_restore_cursor()
 {
-  gfx_restore_cursor_content();
   ctx.term.cursor_row = ctx.term.saved_cursor[0];
   ctx.term.cursor_col = ctx.term.saved_cursor[1];
-  gfx_term_render_cursor();
 }
 
 void
@@ -660,7 +629,6 @@ gfx_term_clear_till_end()
                  ctx.term.cursor_row * ctx.font_height,
                  ctx.width,
                  ctx.font_height);
-  gfx_term_render_cursor();
 }
 
 void
@@ -670,22 +638,18 @@ gfx_term_clear_till_cursor()
                  ctx.term.cursor_row * ctx.font_height,
                  (ctx.term.cursor_col + 1) * ctx.font_width,
                  ctx.font_height);
-  gfx_term_render_cursor();
 }
 
 void
 gfx_term_clear_line()
 {
-  gfx_clear_rect(
-    0, ctx.term.cursor_row * ctx.font_height, ctx.width, ctx.font_height);
-  gfx_term_render_cursor();
+  gfx_clear_rect(0, ctx.term.cursor_row * ctx.font_height, ctx.width, ctx.font_height);
 }
 
 void
 gfx_term_clear_screen()
 {
   gfx_clear();
-  gfx_term_render_cursor();
 }
 
 void
@@ -696,9 +660,7 @@ gfx_term_clear_lines(int from, int to)
   if (to > (int)ctx.term.rows - 1)
     to = ctx.term.rows - 1;
   if (from <= to) {
-    gfx_clear_rect(
-      0, from * ctx.font_height, ctx.width, (to - from + 1) * ctx.font_height);
-    gfx_term_render_cursor();
+    gfx_clear_rect(0, from * ctx.font_height, ctx.width, (to - from + 1) * ctx.font_height);
   }
 }
 
@@ -746,7 +708,6 @@ state_fun_final_letter(char ch, scn_state* state)
       if (state->private_mode_char == '?' && state->cmd_params_size == 1 &&
           state->cmd_params[0] == 25) {
         gfx_term_set_cursor_visibility(0);
-        gfx_restore_cursor_content();
       }
       goto back_to_normal;
       break;
@@ -755,7 +716,6 @@ state_fun_final_letter(char ch, scn_state* state)
       if (state->private_mode_char == '?' && state->cmd_params_size == 1 &&
           state->cmd_params[0] == 25) {
         gfx_term_set_cursor_visibility(1);
-        gfx_term_render_cursor();
       }
       goto back_to_normal;
       break;
@@ -1037,7 +997,6 @@ state_fun_waitsquarebracket(char ch, scn_state* state)
      // Double ESCAPE prints the ESC character
     gfx_putc(ctx.term.cursor_row, ctx.term.cursor_col, ch);
     ++ctx.term.cursor_col;
-    gfx_term_render_cursor();
   } else if (ch == 'c') {
     // ESC-c resets terminal
     gfx_term_reset_attrib();
@@ -1058,5 +1017,4 @@ state_fun_normaltext(char ch, scn_state* state)
 
   gfx_putc(ctx.term.cursor_row, ctx.term.cursor_col, ch);
   ++ctx.term.cursor_col;
-  gfx_term_render_cursor();
 }
