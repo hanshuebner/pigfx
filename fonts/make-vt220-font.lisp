@@ -5,6 +5,9 @@
 
 (in-package :make-vt220-font)
 
+;; Please see https://vt100.net/dec/vt220/glyphs for a description of
+;; how the VT220 font needs to be rendered to pixels.
+
 (defun convert-font (&key (input-filename "vt220-raw.png") (output-filename "font10x20.bin"))
   (with-open-file (output output-filename
                           :direction :output
