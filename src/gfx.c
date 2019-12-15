@@ -78,7 +78,7 @@ typedef struct
     unsigned int columns;
     unsigned int rows;
     unsigned int cursor_row;
-    unsigned int cursor_col;
+    unsigned int cursor_column;
     unsigned int saved_cursor[2];
     char cursor_visible;
 
@@ -116,6 +116,15 @@ void
 gfx_term_render_cursor();
 
 void
+dma_execute_queue_and_wait()
+{
+  dma_execute_queue();
+
+  while (DMA_CHAN0_BUSY)
+    ; // Busy wait for DMA to finish
+}
+
+void
 gfx_toggle_font_height()
 {
   if (ctx.font_height == 8)
@@ -147,7 +156,7 @@ gfx_set_screen_geometry()
   ctx.size = ctx.full_size - (border_top_bottom * 2 * ctx.pitch);
 
   ctx.term.rows = ctx.height / ctx.font_height;
-  ctx.term.cursor_row = ctx.term.cursor_col = 0;
+  ctx.term.cursor_row = ctx.term.cursor_column = 0;
 
   gfx_term_render_cursor();
 }
@@ -270,7 +279,7 @@ gfx_clear()
   dma_enqueue_operation(
     BG, (unsigned int*)(ctx.pfb), ctx.size, 0, DMA_TI_DEST_INC);
 
-  dma_execute_queue();
+  dma_execute_queue_and_wait();
 #else
   unsigned char* pf = ctx.pfb;
   unsigned char* pfb_end = pf + ctx.size;
@@ -307,7 +316,7 @@ gfx_scroll_down(unsigned int npixels)
 {
 #if ENABLED(GFX_USE_DMA)
   gfx_scroll_down_dma(npixels);
-  dma_execute_queue();
+  dma_execute_queue_and_wait();
 #else
   unsigned int* pf_src = (unsigned int*)(ctx.pfb + ctx.pitch * npixels);
   unsigned int* pf_dst = (unsigned int*)ctx.pfb;
@@ -380,7 +389,7 @@ gfx_fill_rect(unsigned int x,
 
 #if ENABLED(GFX_USE_DMA)
   gfx_fill_rect_dma(x, y, width, height);
-  dma_execute_queue();
+  dma_execute_queue_and_wait();
 #else
   while (height--) {
     unsigned char* pf = PFB(x, y);
@@ -488,7 +497,7 @@ gfx_restore_cursor_content()
 {
   // Restore framebuffer content that was overwritten by the cursor
   unsigned char* pb = ctx.cursor_buffer;
-  unsigned char* pfb = PFB(ctx.term.cursor_col * ctx.font_width,
+  unsigned char* pfb = PFB(ctx.term.cursor_column * ctx.font_width,
                            ctx.term.cursor_row * ctx.font_height);
   
   for (int y = 0; y < ctx.font_height; y++) {
@@ -505,11 +514,8 @@ gfx_term_render_cursor()
   // Save framebuffer content that is going to be replaced by the cursor and
   // update the new content
   //
-  while (DMA_CHAN0_BUSY)
-    ; // Busy wait for DMA
-
   unsigned char* pb = ctx.cursor_buffer;
-  unsigned char* pfb = PFB(ctx.term.cursor_col * ctx.font_width,
+  unsigned char* pfb = PFB(ctx.term.cursor_column * ctx.font_width,
                            ctx.term.cursor_row * ctx.font_height);
   
   for (int y = 0; y < ctx.font_height; y++) {
@@ -531,12 +537,9 @@ gfx_term_putstring(const char* str)
   gfx_restore_cursor_content();
 
   while (*str) {
-    while (DMA_CHAN0_BUSY)
-      ; // Busy wait for DMA
-
     switch (*str) {
       case '\r':
-        ctx.term.cursor_col = 0;
+        ctx.term.cursor_column = 0;
         break;
 
       case '\n':
@@ -544,15 +547,15 @@ gfx_term_putstring(const char* str)
         break;
 
       case 0x09: /* tab */
-        ctx.term.cursor_col += 1;
-        ctx.term.cursor_col = MIN(ctx.term.cursor_col + ctx.font_width - ctx.term.cursor_col % ctx.font_width,
-                                  ctx.term.columns - 1);
+        ctx.term.cursor_column += 1;
+        ctx.term.cursor_column = MIN(ctx.term.cursor_column + ctx.font_width - ctx.term.cursor_column % ctx.font_width,
+                                     ctx.term.columns - 1);
         break;
 
       case 0x08:
         /* backspace */
-        if (ctx.term.cursor_col > 0) {
-          --ctx.term.cursor_col;
+        if (ctx.term.cursor_column > 0) {
+          --ctx.term.cursor_column;
         }
         break;
 
@@ -566,15 +569,15 @@ gfx_term_putstring(const char* str)
         break;
     }
 
-    if (ctx.term.cursor_col >= ctx.term.columns) {
-      ctx.term.cursor_col = ctx.term.columns - 1;
+    if (ctx.term.cursor_column >= ctx.term.columns) {
+      ctx.term.cursor_column = ctx.term.columns - 1;
     }
 
     if (ctx.term.cursor_row >= ctx.term.rows) {
-      --ctx.term.cursor_row;
+      ctx.term.cursor_row = ctx.term.rows - 1;
 
       gfx_scroll_down_dma(ctx.font_height);
-      dma_execute_queue();
+      dma_execute_queue_and_wait();
     }
 
     ++str;
@@ -592,27 +595,27 @@ void
 gfx_term_move_cursor(int row, int col)
 {
   ctx.term.cursor_row = MIN(ctx.term.rows - 1, row > 0 ? row : 0);
-  ctx.term.cursor_col = MIN(ctx.term.columns - 1, col > 0 ? col : 0);
+  ctx.term.cursor_column = MIN(ctx.term.columns - 1, col > 0 ? col : 0);
 }
 
 void
 gfx_term_save_cursor()
 {
   ctx.term.saved_cursor[0] = ctx.term.cursor_row;
-  ctx.term.saved_cursor[1] = ctx.term.cursor_col;
+  ctx.term.saved_cursor[1] = ctx.term.cursor_column;
 }
 
 void
 gfx_term_restore_cursor()
 {
   ctx.term.cursor_row = ctx.term.saved_cursor[0];
-  ctx.term.cursor_col = ctx.term.saved_cursor[1];
+  ctx.term.cursor_column = ctx.term.saved_cursor[1];
 }
 
 void
 gfx_term_clear_till_end()
 {
-  gfx_clear_rect(ctx.term.cursor_col * ctx.font_width,
+  gfx_clear_rect(ctx.term.cursor_column * ctx.font_width,
                  ctx.term.cursor_row * ctx.font_height,
                  ctx.width,
                  ctx.font_height);
@@ -623,7 +626,7 @@ gfx_term_clear_till_cursor()
 {
   gfx_clear_rect(0,
                  ctx.term.cursor_row * ctx.font_height,
-                 (ctx.term.cursor_col + 1) * ctx.font_width,
+                 (ctx.term.cursor_column + 1) * ctx.font_width,
                  ctx.font_height);
 }
 
@@ -752,7 +755,7 @@ state_fun_final_letter(char ch, scn_state* state)
     case 'A': {
       int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
       gfx_term_move_cursor(MAX(0, (int)ctx.term.cursor_row - n),
-                           ctx.term.cursor_col);
+                           ctx.term.cursor_column);
       goto back_to_normal;
       break;
     }
@@ -761,7 +764,7 @@ state_fun_final_letter(char ch, scn_state* state)
       int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
       gfx_term_move_cursor(
         MIN((int)ctx.term.rows - 1, (int)ctx.term.cursor_row + n),
-        ctx.term.cursor_col);
+        ctx.term.cursor_column);
       goto back_to_normal;
       break;
     }
@@ -770,7 +773,7 @@ state_fun_final_letter(char ch, scn_state* state)
       int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
       gfx_term_move_cursor(
         ctx.term.cursor_row,
-        MIN((int)ctx.term.columns - 1, (int)ctx.term.cursor_col + n));
+        MIN((int)ctx.term.columns - 1, (int)ctx.term.cursor_column + n));
       goto back_to_normal;
       break;
     }
@@ -778,7 +781,7 @@ state_fun_final_letter(char ch, scn_state* state)
     case 'D': {
       int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
       gfx_term_move_cursor(ctx.term.cursor_row,
-                           MAX(0, (int)ctx.term.cursor_col - n));
+                           MAX(0, (int)ctx.term.cursor_column - n));
       goto back_to_normal;
       break;
     }
@@ -883,7 +886,7 @@ state_fun_final_letter(char ch, scn_state* state)
           buf[1] = '[';
           b2s(buf + 2, (unsigned char)ctx.term.cursor_row + 1);
           buf[5] = ';';
-          b2s(buf + 6, (unsigned char)ctx.term.cursor_col + 1);
+          b2s(buf + 6, (unsigned char)ctx.term.cursor_column + 1);
           buf[9] = 'R';
           uart_write(buf, 10);
         }
@@ -982,8 +985,8 @@ state_fun_waitsquarebracket(char ch, scn_state* state)
     return;
   } else if (ch == TERM_ESCAPE_CHAR) {
      // Double ESCAPE prints the ESC character
-    gfx_putc(ctx.term.cursor_row, ctx.term.cursor_col, ch);
-    ++ctx.term.cursor_col;
+    gfx_putc(ctx.term.cursor_row, ctx.term.cursor_column, ch);
+    ++ctx.term.cursor_column;
   } else if (ch == 'c') {
     // ESC-c resets terminal
     gfx_term_reset_attrib();
@@ -1002,6 +1005,6 @@ state_fun_normaltext(char ch, scn_state* state)
     return;
   }
 
-  gfx_putc(ctx.term.cursor_row, ctx.term.cursor_col, ch);
-  ++ctx.term.cursor_col;
+  gfx_putc(ctx.term.cursor_row, ctx.term.cursor_column, ch);
+  ctx.term.cursor_column++;
 }
