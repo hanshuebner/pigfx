@@ -56,7 +56,7 @@ This code is based on a file that contains the following:
 
 #define is_digit(c) ((c) >= '0' && (c) <= '9')
 
-#define DO_LOG_STRING(x)
+#define DO_LOG_STRING(x) ((void) (x))
 //#define DO_LOG_STRING(x) uart_write_str(x)
 //#define DO_LOG_STRING(x) gfx_term_putstring((const char*)x)
 
@@ -536,6 +536,7 @@ repeat:
 
       case 'A':
         flags |= UPPERCASE;
+        /* FALLTHRU */
 
       case 'a':
         if (qualifier == 'l')
@@ -551,6 +552,7 @@ repeat:
 
       case 'X':
         flags |= UPPERCASE;
+        /* FALLTHRU */
 
       case 'x':
         base = 16;
