@@ -55,12 +55,6 @@ gfx_clear_rect(unsigned int x,
                unsigned int height);
 
 /*!
- * Renders the character "c" at location (x,y)
- */
-extern void
-gfx_putc(unsigned int row, unsigned int col, unsigned char c);
-
-/*!
  * Scrolls the entire framebuffer down (adding background color at the bottom)
  */
 extern void
@@ -79,7 +73,9 @@ gfx_scroll_up(unsigned int npixels);
 extern void
 gfx_term_putstring(const char* str);
 extern void
-gfx_term_set_cursor_visibility(unsigned char visible);
+gfx_term_set_cursor_visibility(int);
+extern void
+gfx_term_blink_cursor();
 extern void
 gfx_term_move_cursor(int row, int col);
 extern void

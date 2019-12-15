@@ -80,7 +80,9 @@ typedef struct
     unsigned int cursor_row;
     unsigned int cursor_column;
     unsigned int saved_cursor[2];
-    char cursor_visible;
+    int cursor_visible;
+    int wraparound;
+    int cursor_blink_state;
 
     scn_state state;
   } term;
@@ -216,8 +218,12 @@ gfx_set_env(void* p_framebuffer,
   ctx.width = width;
   ctx.pitch = pitch;
 
+  gfx_set_font_height(FONT_HEIGHT);
+
   ctx.term.columns = ctx.width / ctx.font_width;
   ctx.term.cursor_visible = 1;
+  ctx.term.wraparound = 1;
+  ctx.term.cursor_blink_state = 1;
   ctx.term.state.next = state_fun_normaltext;
 
   ctx.bg = 0;
@@ -229,8 +235,6 @@ gfx_set_env(void* p_framebuffer,
   for (unsigned int i = 0; i < sizeof(ctx.line_attributes); i++) {
     ctx.line_attributes[i] = 0;
   }
-
-  gfx_set_font_height(FONT_HEIGHT);
 }
 
 void
@@ -467,17 +471,19 @@ gfx_line(int x0, int y0, int x1, int y1)
   }
 }
 
-void
-gfx_putc(unsigned int row, unsigned int col, unsigned char c)
+static void
+gfx_putc(unsigned char c)
 {
-  if (col >= ctx.term.columns)
+  if (ctx.term.cursor_column >= ctx.term.columns) {
     return;
+  }
 
-  if (row >= ctx.term.rows)
+  if (ctx.term.cursor_row >= ctx.term.rows) {
     return;
+  }
 
   unsigned char* p_glyph = (unsigned char*)(ctx.font_data + (c * ctx.font_width * ctx.font_height));
-  unsigned char* pf = PFB((col * ctx.font_width), (row * ctx.font_height));
+  unsigned char* pf = PFB((ctx.term.cursor_column * ctx.font_width), (ctx.term.cursor_row * ctx.font_height));
 
   for (int y = 0; y < ctx.font_height; y++) {
     for (int x = 0; x < ctx.font_width; x++) {
@@ -485,6 +491,8 @@ gfx_putc(unsigned int row, unsigned int col, unsigned char c)
     }
     pf += ctx.pitch;
   }
+
+  ctx.term.cursor_column++;
 }
 
 /*
@@ -521,7 +529,9 @@ gfx_term_render_cursor()
   for (int y = 0; y < ctx.font_height; y++) {
     for (int x = 0; x < ctx.font_width; x++) {
       *pb++ = pfb[x];
-      pfb[x] = ctx.cursor_color;
+      if (ctx.term.cursor_visible && ctx.term.cursor_blink_state) {
+        pfb[x] = ctx.cursor_color;
+      }
     }
     pfb += ctx.pitch;
   }
@@ -529,7 +539,8 @@ gfx_term_render_cursor()
 
 /* gfx_term_putstring is the main entry point to the terminal
  * emulator.  Everything that is displayed on the screen goes through
- * this function */
+ * this function
+ */
 
 void
 gfx_term_putstring(const char* str)
@@ -543,7 +554,7 @@ gfx_term_putstring(const char* str)
         break;
 
       case '\n':
-        ++ctx.term.cursor_row;
+        ctx.term.cursor_row++;
         break;
 
       case 0x09: /* tab */
@@ -555,7 +566,7 @@ gfx_term_putstring(const char* str)
       case 0x08:
         /* backspace */
         if (ctx.term.cursor_column > 0) {
-          --ctx.term.cursor_column;
+          ctx.term.cursor_column--;
         }
         break;
 
@@ -570,7 +581,12 @@ gfx_term_putstring(const char* str)
     }
 
     if (ctx.term.cursor_column >= ctx.term.columns) {
-      ctx.term.cursor_column = ctx.term.columns - 1;
+      if (ctx.term.wraparound) {
+        ctx.term.cursor_column = 0;
+        ctx.term.cursor_row++;
+      } else {
+        ctx.term.cursor_column = ctx.term.columns - 1;
+      }
     }
 
     if (ctx.term.cursor_row >= ctx.term.rows) {
@@ -586,9 +602,21 @@ gfx_term_putstring(const char* str)
 }
 
 void
-gfx_term_set_cursor_visibility(unsigned char visible)
+gfx_term_set_cursor_visibility(int visible)
 {
   ctx.term.cursor_visible = visible;
+}
+
+void
+gfx_term_set_wraparound(int wraparound)
+{
+  ctx.term.wraparound = wraparound;
+}
+
+void
+gfx_term_blink_cursor()
+{
+  ctx.term.cursor_blink_state = !ctx.term.cursor_blink_state;
 }
 
 void
@@ -694,18 +722,18 @@ state_fun_final_letter(char ch, scn_state* state)
   }
 
   switch (ch) {
-    case 'l':
-      if (state->private_mode_char == '?' && state->cmd_params_size == 1 &&
-          state->cmd_params[0] == 25) {
-        gfx_term_set_cursor_visibility(0);
-      }
-      goto back_to_normal;
-      break;
-
     case 'h':
-      if (state->private_mode_char == '?' && state->cmd_params_size == 1 &&
-          state->cmd_params[0] == 25) {
-        gfx_term_set_cursor_visibility(1);
+    case 'l':
+      if (state->private_mode_char == '?' && state->cmd_params_size == 1) {
+        int on_or_off = ch == 'h';
+        switch (state->cmd_params[0]) {
+        case 6:
+          gfx_term_set_wraparound(on_or_off);
+          break;
+        case 25:
+          gfx_term_set_cursor_visibility(on_or_off);
+          break;
+        }
       }
       goto back_to_normal;
       break;
@@ -762,18 +790,16 @@ state_fun_final_letter(char ch, scn_state* state)
 
     case 'B': {
       int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
-      gfx_term_move_cursor(
-        MIN((int)ctx.term.rows - 1, (int)ctx.term.cursor_row + n),
-        ctx.term.cursor_column);
+      gfx_term_move_cursor(MIN((int)ctx.term.rows - 1, (int)ctx.term.cursor_row + n),
+                           ctx.term.cursor_column);
       goto back_to_normal;
       break;
     }
 
     case 'C': {
       int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
-      gfx_term_move_cursor(
-        ctx.term.cursor_row,
-        MIN((int)ctx.term.columns - 1, (int)ctx.term.cursor_column + n));
+      gfx_term_move_cursor(ctx.term.cursor_row,
+                           MIN((int)ctx.term.columns - 1, (int)ctx.term.cursor_column + n));
       goto back_to_normal;
       break;
     }
@@ -985,8 +1011,7 @@ state_fun_waitsquarebracket(char ch, scn_state* state)
     return;
   } else if (ch == TERM_ESCAPE_CHAR) {
      // Double ESCAPE prints the ESC character
-    gfx_putc(ctx.term.cursor_row, ctx.term.cursor_column, ch);
-    ++ctx.term.cursor_column;
+    gfx_putc(ch);
   } else if (ch == 'c') {
     // ESC-c resets terminal
     gfx_term_reset_attrib();
@@ -1005,6 +1030,5 @@ state_fun_normaltext(char ch, scn_state* state)
     return;
   }
 
-  gfx_putc(ctx.term.cursor_row, ctx.term.cursor_column, ch);
-  ctx.term.cursor_column++;
+  gfx_putc(ch);
 }

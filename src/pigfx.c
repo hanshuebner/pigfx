@@ -31,11 +31,6 @@ volatile char* uart_buffer_limit;
 extern unsigned int pheap_space;
 extern unsigned int heap_sz;
 
-#if ENABLED(SKIP_BACKSPACE_ECHO)
-volatile unsigned int backspace_n_skip;
-volatile unsigned int last_backspace_t;
-#endif
-
 char*
 u2s(unsigned int u)
 {
@@ -142,9 +137,6 @@ static void
 _keypress_handler(const char* str)
 {
   const char* c = str;
-#if ENABLED(SEND_CR_LF)
-  char CR = 13, LF = 10;
-#endif
 
   while (*c) {
     char ch = *c;
@@ -171,25 +163,10 @@ _keypress_handler(const char* str)
     }
 #endif
 
-#if ENABLED(BACKSPACE_ECHO)
-    if (ch == 0x8)
-      gfx_term_putstring("\x7F");
-#endif
-
-#if ENABLED(SKIP_BACKSPACE_ECHO)
-    if (ch == 0x7F) {
-      backspace_n_skip = 2;
-      last_backspace_t = time_microsec();
-    }
-#endif
     if (ch != 0)
       uart_write(&ch, 1);
     ++c;
 
-#if ENABLED(SEND_CR_LF)
-    if (ch == CR)
-      uart_write(&LF, 1);
-#endif
   }
 }
 
@@ -206,8 +183,11 @@ _heartbeat_timer_handler(__attribute__((unused)) unsigned hnd,
     led_status = 1;
   }
 
-  attach_timer_handler(
-    1000 / HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
+  // The heartbeat routine is not called reliably, cursor blinking
+  // does not work for that reason at the moment
+  // gfx_term_blink_cursor();
+
+  attach_timer_handler(1000 / HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
 }
 
 void
@@ -323,77 +303,6 @@ initialize_framebuffer()
 }
 
 void
-video_test()
-{
-  unsigned char ch = 'A';
-  unsigned int row = 0;
-  unsigned int col = 0;
-  unsigned int term_cols, term_rows;
-  gfx_get_term_size(&term_rows, &term_cols);
-
-#if 0
-    unsigned int t0 = time_microsec();
-    for( row=0; row<1000000; ++row )
-    {
-        gfx_putc(0,col,ch);
-    }
-    t0 = time_microsec()-t0;
-    cout("T: ");cout_d(t0);cout_endl();
-    return;
-#endif
-#if 0
-    while(1)
-    {
-        gfx_putc(row,col,ch);
-        col = col+1;
-        if( col >= term_cols )
-        {
-            usleep(100000);
-            col=0;
-            gfx_scroll_up(FONT_HEIGHT);
-        }
-        ++ch;
-        gfx_set_fg( ch );
-    }
-#endif
-#if 1
-  while (1) {
-    gfx_putc(row, col, ch);
-    col = col + 1;
-    if (col >= term_cols) {
-      usleep(50000);
-      col = 0;
-      row++;
-      if (row >= term_rows) {
-        row = term_rows - 1;
-        int i;
-        for (i = 0; i < 10; ++i) {
-          usleep(500000);
-          gfx_scroll_down(FONT_HEIGHT);
-          gfx_set_bg(i);
-        }
-        usleep(1000000);
-        gfx_clear();
-        return;
-      }
-    }
-    ++ch;
-    gfx_set_fg(ch);
-  }
-#endif
-
-#if 0
-    while(1)
-    {
-        gfx_set_bg( RR );
-        gfx_clear();
-        RR = (RR+1)%16;
-        usleep(1000000);
-    }
-#endif
-}
-
-void
 video_line_test()
 {
   int x = -10;
@@ -443,34 +352,14 @@ video_line_test()
 void
 term_main_loop()
 {
-  // ee_printf("Waiting for UART data (9600,8,N,1)\n");
-
-  /**/
-  // while( uart_buffer_start == uart_buffer_end ) usleep(100000 );
-  /**/
-
-  // gfx_term_putstring( "\x1B[2J" );
-
   char strb[2] = { 0, 0 };
 
   while (1) {
     if (!DMA_CHAN0_BUSY && uart_buffer_start != uart_buffer_end) {
       strb[0] = *uart_buffer_start++;
-      if (uart_buffer_start >= uart_buffer_limit)
+      if (uart_buffer_start >= uart_buffer_limit) {
         uart_buffer_start = uart_buffer;
-
-#if ENABLED(SKIP_BACKSPACE_ECHO)
-      if (time_microsec() - last_backspace_t > 50000)
-        backspace_n_skip = 0;
-
-      if (backspace_n_skip > 0) {
-        // ee_printf("Skip %c",strb[0]);
-        strb[0] = 0; // Skip this char
-        backspace_n_skip--;
-        if (backspace_n_skip == 0)
-          strb[0] = 0x7F; // Add backspace instead
       }
-#endif
 
       gfx_term_putstring(strb);
     }
@@ -493,30 +382,14 @@ entry_point()
   add_initial_baudrate();
   heartbeat_init();
 
-  // heartbeat_loop();
-
   initialize_framebuffer();
 
   gfx_term_putstring("\x1B[2J"); // Clear screen
-
-  // gfx_set_bg(27);
-  // gfx_term_putstring( "\x1B[2K" ); // Render blue line at top
-  // ee_printf(" ===  PiGFX ===  v.%s\n", PIGFX_VERSION );
-  // gfx_term_putstring( "\x1B[2K" );
-  // gfx_term_putstring( "\x1B[2K" );
-  // ee_printf(" Copyright (c) 2016 Filippo Bergamasco\n\n");
-  // gfx_set_bg(0);
 
   timers_init();
   attach_timer_handler(HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
 
   initialize_uart_irq();
-
-  // video_test();
-  // video_line_test();
-
-#if 1
-  // ee_printf("Initializing USB\n");
 
   if (USPiInitialize()) {
     // ee_printf("Initialization OK!\n");
@@ -536,9 +409,6 @@ entry_point()
 
   else
     ee_printf("USB initialization failed.\n");
-#endif
-
-  ee_printf("---------\n");
 
   gfx_term_reset_attrib();
   gfx_set_fg(7);
