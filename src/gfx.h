@@ -9,26 +9,17 @@ gfx_set_env(void* p_framebuffer,
             unsigned int height,
             unsigned int pitch,
             unsigned int size);
-extern void
-gfx_set_bg(GFX_COL col);
-extern void
-gfx_set_fg(GFX_COL col);
-extern void
-gfx_swap_fg_bg();
-extern void
-gfx_get_term_size(unsigned int* rows, unsigned int* cols);
-extern void
-gfx_set_font_height(unsigned int h);
-extern void
-gfx_toggle_font_height();
-extern void
-gfx_toggle_lines();
+extern void gfx_set_bg(GFX_COL col);
+extern void gfx_set_fg(GFX_COL col);
+extern void gfx_swap_fg_bg();
+extern void gfx_get_term_size(unsigned int* rows, unsigned int* cols);
+extern void gfx_set_font_height(unsigned int h);
+extern void gfx_toggle_font_height();
 
 /*!
  * Fills the entire framebuffer with the background color
  */
-extern void
-gfx_clear();
+extern void gfx_clear();
 
 /*!
  * Fills a rectangle with the foreground color

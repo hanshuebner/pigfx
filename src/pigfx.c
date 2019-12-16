@@ -152,16 +152,7 @@ _keypress_handler(const char* str)
     } else if (ch == 0xFD) {
       rotate_baudrate();
       ch = 0;
-    } else if (ch == 0xFC) {
-      gfx_toggle_lines();
-      ch = 0;
     }
-
-#if ENABLED(SWAP_DEL_WITH_BACKSPACE)
-    if (ch == 0x7F) {
-      ch = 0x8;
-    }
-#endif
 
     if (ch != 0)
       uart_write(&ch, 1);

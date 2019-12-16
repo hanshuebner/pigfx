@@ -80,8 +80,13 @@ typedef struct
     unsigned int cursor_row;
     unsigned int cursor_column;
     unsigned int saved_cursor[2];
+
     int cursor_visible;
     int wraparound;
+
+    unsigned int scrolling_region_start;
+    unsigned int scrolling_region_end;
+
     int cursor_blink_state;
 
     scn_state state;
@@ -126,6 +131,13 @@ dma_execute_queue_and_wait()
     ; // Busy wait for DMA to finish
 }
 
+int
+in_scrolling_region()
+{
+  return ctx.term.cursor_row >= ctx.term.scrolling_region_start &&
+         ctx.term.cursor_row <= ctx.term.scrolling_region_end;
+}
+
 void
 gfx_toggle_font_height()
 {
@@ -161,22 +173,6 @@ gfx_set_screen_geometry()
   ctx.term.cursor_row = ctx.term.cursor_column = 0;
 
   gfx_term_render_cursor();
-}
-
-void
-gfx_toggle_lines()
-{
-  if (ctx.line_limit == 0)
-    ctx.line_limit = ctx.term.rows;
-
-  ctx.line_limit--;
-  if (ctx.line_limit < 16)
-    ctx.line_limit = ctx.full_height / ctx.font_height;
-
-  gfx_set_screen_geometry();
-  gfx_term_putstring("[");
-  gfx_term_putstring(u2s(ctx.line_limit));
-  gfx_term_putstring(" lines]\n");
 }
 
 void
@@ -221,9 +217,14 @@ gfx_set_env(void* p_framebuffer,
   gfx_set_font_height(FONT_HEIGHT);
 
   ctx.term.columns = ctx.width / ctx.font_width;
+
   ctx.term.cursor_visible = 1;
   ctx.term.wraparound = 1;
+  ctx.term.scrolling_region_start = 0;
+  ctx.term.scrolling_region_end = ctx.term.rows;
+
   ctx.term.cursor_blink_state = 1;
+
   ctx.term.state.next = state_fun_normaltext;
 
   ctx.bg = 0;
@@ -273,7 +274,6 @@ gfx_get_term_size(unsigned int* rows, unsigned int* cols)
 void
 gfx_clear()
 {
-#if ENABLED(GFX_USE_DMA)
   unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
   *BG = GET_BG32(ctx);
   *(BG + 1) = *BG;
@@ -284,12 +284,6 @@ gfx_clear()
     BG, (unsigned int*)(ctx.pfb), ctx.size, 0, DMA_TI_DEST_INC);
 
   dma_execute_queue_and_wait();
-#else
-  unsigned char* pf = ctx.pfb;
-  unsigned char* pfb_end = pf + ctx.size;
-  while (pf < pfb_end)
-    *pf++ = GET_BG(ctx);
-#endif
 }
 
 void
@@ -318,23 +312,8 @@ gfx_scroll_down_dma(unsigned int npixels)
 void
 gfx_scroll_down(unsigned int npixels)
 {
-#if ENABLED(GFX_USE_DMA)
   gfx_scroll_down_dma(npixels);
   dma_execute_queue_and_wait();
-#else
-  unsigned int* pf_src = (unsigned int*)(ctx.pfb + ctx.pitch * npixels);
-  unsigned int* pf_dst = (unsigned int*)ctx.pfb;
-  const unsigned int* const pfb_end = (unsigned int*)(ctx.pfb + ctx.size);
-
-  while (pf_src < pfb_end)
-    *pf_dst++ = *pf_src++;
-
-  // Fill with bg at the bottom
-  const unsigned int BG = GET_BG32(ctx);
-  while (pf_dst < pfb_end)
-    *pf_dst++ = BG;
-
-#endif
 }
 
 void
@@ -391,20 +370,8 @@ gfx_fill_rect(unsigned int x,
   if (y + height > ctx.height)
     height = ctx.height - y;
 
-#if ENABLED(GFX_USE_DMA)
   gfx_fill_rect_dma(x, y, width, height);
   dma_execute_queue_and_wait();
-#else
-  while (height--) {
-    unsigned char* pf = PFB(x, y);
-    const unsigned char* const pfb_end = pf + width;
-
-    while (pf < pfb_end)
-      *pf++ = GET_FG(ctx);
-
-    ++y;
-  }
-#endif
 }
 
 void
@@ -482,8 +449,10 @@ gfx_putc(unsigned char c)
     return;
   }
 
-  unsigned char* p_glyph = (unsigned char*)(ctx.font_data + (c * ctx.font_width * ctx.font_height));
-  unsigned char* pf = PFB((ctx.term.cursor_column * ctx.font_width), (ctx.term.cursor_row * ctx.font_height));
+  unsigned char* p_glyph =
+    (unsigned char*)(ctx.font_data + (c * ctx.font_width * ctx.font_height));
+  unsigned char* pf = PFB((ctx.term.cursor_column * ctx.font_width),
+                          (ctx.term.cursor_row * ctx.font_height));
 
   for (int y = 0; y < ctx.font_height; y++) {
     for (int x = 0; x < ctx.font_width; x++) {
@@ -507,7 +476,7 @@ gfx_restore_cursor_content()
   unsigned char* pb = ctx.cursor_buffer;
   unsigned char* pfb = PFB(ctx.term.cursor_column * ctx.font_width,
                            ctx.term.cursor_row * ctx.font_height);
-  
+
   for (int y = 0; y < ctx.font_height; y++) {
     for (int x = 0; x < ctx.font_width; x++) {
       pfb[x] = *pb++;
@@ -525,7 +494,7 @@ gfx_term_render_cursor()
   unsigned char* pb = ctx.cursor_buffer;
   unsigned char* pfb = PFB(ctx.term.cursor_column * ctx.font_width,
                            ctx.term.cursor_row * ctx.font_height);
-  
+
   for (int y = 0; y < ctx.font_height; y++) {
     for (int x = 0; x < ctx.font_width; x++) {
       *pb++ = pfb[x];
@@ -559,7 +528,8 @@ gfx_term_putstring(const char* str)
 
       case 0x09: /* tab */
         ctx.term.cursor_column += 1;
-        ctx.term.cursor_column = MIN(ctx.term.cursor_column + ctx.font_width - ctx.term.cursor_column % ctx.font_width,
+        ctx.term.cursor_column = MIN(ctx.term.cursor_column + ctx.font_width -
+                                       ctx.term.cursor_column % ctx.font_width,
                                      ctx.term.columns - 1);
         break;
 
@@ -661,7 +631,8 @@ gfx_term_clear_till_cursor()
 void
 gfx_term_clear_line()
 {
-  gfx_clear_rect(0, ctx.term.cursor_row * ctx.font_height, ctx.width, ctx.font_height);
+  gfx_clear_rect(
+    0, ctx.term.cursor_row * ctx.font_height, ctx.width, ctx.font_height);
 }
 
 void
@@ -678,7 +649,8 @@ gfx_term_clear_lines(int from, int to)
   if (to > (int)ctx.term.rows - 1)
     to = ctx.term.rows - 1;
   if (from <= to) {
-    gfx_clear_rect(0, from * ctx.font_height, ctx.width, (to - from + 1) * ctx.font_height);
+    gfx_clear_rect(
+      0, from * ctx.font_height, ctx.width, (to - from + 1) * ctx.font_height);
   }
 }
 
@@ -695,48 +667,70 @@ gfx_term_clear_lines(int from, int to)
 void
 state_fun_final_letter(char ch, scn_state* state)
 {
-  if (state->private_mode_char == '#') {
-    // Non-standard ANSI Codes
-    switch (ch) {
-      case 'l':
-        /* render line */
-        if (state->cmd_params_size == 4) {
-          gfx_line(state->cmd_params[0],
-                   state->cmd_params[1],
-                   state->cmd_params[2],
-                   state->cmd_params[3]);
-        }
-        goto back_to_normal;
-        break;
-      case 'r':
-        /* render a filled rectangle */
-        if (state->cmd_params_size == 4) {
-          gfx_fill_rect(state->cmd_params[0],
-                        state->cmd_params[1],
-                        state->cmd_params[2],
-                        state->cmd_params[3]);
-        }
-        goto back_to_normal;
-        break;
-    }
-  }
-
   switch (ch) {
     case 'h':
     case 'l':
       if (state->private_mode_char == '?' && state->cmd_params_size == 1) {
         int on_or_off = ch == 'h';
         switch (state->cmd_params[0]) {
-        case 6:
-          gfx_term_set_wraparound(on_or_off);
-          break;
-        case 25:
-          gfx_term_set_cursor_visibility(on_or_off);
-          break;
+          case 6:
+            gfx_term_set_wraparound(on_or_off);
+            break;
+          case 25:
+            gfx_term_set_cursor_visibility(on_or_off);
+            break;
         }
       }
       goto back_to_normal;
-      break;
+
+    case 'A': {
+      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
+      gfx_term_move_cursor(MAX(0, (int)ctx.term.cursor_row - n),
+                           ctx.term.cursor_column);
+      goto back_to_normal;
+    }
+
+    case 'B': {
+      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
+      gfx_term_move_cursor(
+        MIN((int)ctx.term.rows - 1, (int)ctx.term.cursor_row + n),
+        ctx.term.cursor_column);
+      goto back_to_normal;
+    }
+
+    case 'C': {
+      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
+      gfx_term_move_cursor(
+        ctx.term.cursor_row,
+        MIN((int)ctx.term.columns - 1, (int)ctx.term.cursor_column + n));
+      goto back_to_normal;
+    }
+
+    case 'D': {
+      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
+      gfx_term_move_cursor(ctx.term.cursor_row,
+                           MAX(0, (int)ctx.term.cursor_column - n));
+      goto back_to_normal;
+    }
+
+    case 'J': {
+      switch (state->cmd_params_size >= 1 ? state->cmd_params[0] : 0) {
+        case 0:
+          gfx_term_clear_lines(ctx.term.cursor_row, ctx.term.rows - 1);
+          break;
+
+        case 1:
+          gfx_term_clear_lines(0, ctx.term.cursor_row);
+          break;
+
+        case 2:
+          gfx_term_move_cursor(0, 0);
+          gfx_term_clear_screen();
+          break;
+      }
+
+      goto back_to_normal;
+    }
 
     case 'K':
       if (state->cmd_params_size == 0) {
@@ -758,59 +752,28 @@ state_fun_final_letter(char ch, scn_state* state)
         }
       }
       goto back_to_normal;
-      break;
 
-    case 'J': {
-      switch (state->cmd_params_size >= 1 ? state->cmd_params[0] : 0) {
-        case 0:
-          gfx_term_clear_lines(ctx.term.cursor_row, ctx.term.rows - 1);
-          break;
+      /* 4.11 Editing commands */
 
-        case 1:
-          gfx_term_clear_lines(0, ctx.term.cursor_row);
-          break;
-
-        case 2:
-          gfx_term_move_cursor(0, 0);
-          gfx_term_clear_screen();
-          break;
+    case 'L': // Insert Line (IL)
+      if (state->cmd_params_size == 1 && in_scrolling_region()) {
       }
-
       goto back_to_normal;
-      break;
-    }
 
-    case 'A': {
-      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
-      gfx_term_move_cursor(MAX(0, (int)ctx.term.cursor_row - n),
-                           ctx.term.cursor_column);
+    case 'M': // Delete Line (DL)
+      if (state->cmd_params_size == 1 && in_scrolling_region()) {
+      }
       goto back_to_normal;
-      break;
-    }
 
-    case 'B': {
-      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
-      gfx_term_move_cursor(MIN((int)ctx.term.rows - 1, (int)ctx.term.cursor_row + n),
-                           ctx.term.cursor_column);
+    case '@': // Insert Characters (ICH)
+      if (state->cmd_params_size == 1) {
+      }
       goto back_to_normal;
-      break;
-    }
 
-    case 'C': {
-      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
-      gfx_term_move_cursor(ctx.term.cursor_row,
-                           MIN((int)ctx.term.columns - 1, (int)ctx.term.cursor_column + n));
+    case 'P': // Delete Characters (DCH)
+      if (state->cmd_params_size == 1) {
+      }
       goto back_to_normal;
-      break;
-    }
-
-    case 'D': {
-      int n = state->cmd_params_size > 0 ? state->cmd_params[0] : 1;
-      gfx_term_move_cursor(ctx.term.cursor_row,
-                           MAX(0, (int)ctx.term.cursor_column - n));
-      goto back_to_normal;
-      break;
-    }
 
     case 'm': {
       if (state->cmd_params_size == 0)
@@ -852,7 +815,6 @@ state_fun_final_letter(char ch, scn_state* state)
       }
 
       goto back_to_normal;
-      break;
     }
 
     case 'f':
@@ -861,18 +823,15 @@ state_fun_final_letter(char ch, scn_state* state)
       int c = state->cmd_params_size < 2 ? 1 : state->cmd_params[1];
       gfx_term_move_cursor(r - 1, c - 1);
       goto back_to_normal;
-      break;
     }
 
     case 's':
       gfx_term_save_cursor();
       goto back_to_normal;
-      break;
 
     case 'u':
       gfx_term_restore_cursor();
       goto back_to_normal;
-      break;
 
     case 'c': {
       if (state->cmd_params_size == 0 || state->cmd_params[0] == 0) {
@@ -893,7 +852,6 @@ state_fun_final_letter(char ch, scn_state* state)
         uart_write(buf, 7);
       }
       goto back_to_normal;
-      break;
     }
 
     case 'n': {
@@ -919,12 +877,22 @@ state_fun_final_letter(char ch, scn_state* state)
       }
 
       goto back_to_normal;
-      break;
     }
+
+    case 'r': // 4.13.1 Set Top and Bottom Margins (DECSTBM)
+      if (state->cmd_params_size == 2) {
+        int start = state->cmd_params[0];
+        int end = state->cmd_params[1];
+        if (start > 0 && end > 0 && (end - start) >= 2) {
+          ctx.term.scrolling_region_start = start - 1;
+          ctx.term.scrolling_region_end = end - 1;
+        }
+      }
+
+      goto back_to_normal;
 
     case '?': {
       goto back_to_normal;
-      break;
     }
 
     default:
@@ -1010,7 +978,7 @@ state_fun_waitsquarebracket(char ch, scn_state* state)
     state->next = state_fun_double;
     return;
   } else if (ch == TERM_ESCAPE_CHAR) {
-     // Double ESCAPE prints the ESC character
+    // Double ESCAPE prints the ESC character
     gfx_putc(ch);
   } else if (ch == 'c') {
     // ESC-c resets terminal
