@@ -46,44 +46,20 @@ gfx_clear_rect(unsigned int x,
                unsigned int height);
 
 /*!
- * Scrolls the entire framebuffer down (adding background color at the top)
- */
-extern void
-gfx_scroll_down(unsigned int npixels);
-
-/*!
- * Scrolls the entire framebuffer up (adding background color at the bottom)
- */
-extern void
-gfx_scroll_up(unsigned int npixels);
-
-/*!
  *  Terminal
  *
  */
-extern void
-gfx_term_putstring(const char* str);
-extern void
-gfx_term_set_cursor_visibility(int);
-extern void
-gfx_term_blink_cursor();
-extern void
-gfx_term_move_cursor(int row, int col);
-extern void
-gfx_term_save_cursor();
-extern void
-gfx_term_restore_cursor();
-extern void
-gfx_term_clear_till_end();
-extern void
-gfx_term_clear_till_cursor();
-extern void
-gfx_term_clear_line();
-extern void
-gfx_term_clear_lines(int from, int to);
-extern void
-gfx_term_clear_screen();
-extern void
-gfx_term_reset_attrib();
+extern void gfx_term_putstring(const char* str);
+extern void gfx_term_set_cursor_visibility(int);
+extern void gfx_term_blink_cursor();
+extern void gfx_term_move_cursor(int row, int col);
+extern void gfx_term_save_cursor();
+extern void gfx_term_restore_cursor();
+extern void gfx_term_clear_till_end();
+extern void gfx_term_clear_till_cursor();
+extern void gfx_term_clear_line();
+extern void gfx_term_clear_lines(int from, int to);
+extern void gfx_term_clear_screen();
+extern void gfx_term_reset_attrib();
 
 #endif

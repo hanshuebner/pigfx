@@ -221,7 +221,7 @@ gfx_set_env(void* p_framebuffer,
   ctx.term.cursor_visible = 1;
   ctx.term.wraparound = 1;
   ctx.term.scrolling_region_start = 0;
-  ctx.term.scrolling_region_end = ctx.term.rows;
+  ctx.term.scrolling_region_end = ctx.term.rows - 1;
 
   ctx.term.cursor_blink_state = 1;
 
@@ -286,34 +286,46 @@ gfx_clear()
   dma_execute_queue_and_wait();
 }
 
-void
-gfx_scroll_up(unsigned int npixels)
+static void
+gfx_scroll_up(unsigned int start_line,
+              unsigned int end_line,
+              unsigned int lines)
 {
-  unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
-  *BG = GET_BG32(ctx);
-  *(BG + 1) = *BG;
-  *(BG + 2) = *BG;
-  *(BG + 3) = *BG;
-  unsigned int line_height = ctx.pitch * npixels;
+  unsigned int pixels_per_line = ctx.font_height * ctx.pitch;
+  unsigned char* from = ctx.pfb + (lines + start_line) * pixels_per_line;
+  unsigned char* to = ctx.pfb + start_line * pixels_per_line;
+  unsigned int length = (end_line - start_line - lines + 1) * pixels_per_line;
 
-  dma_enqueue_operation((unsigned int*)(ctx.pfb + line_height),
-                        (unsigned int*)(ctx.pfb),
-                        (ctx.size - line_height),
+  dma_enqueue_operation((unsigned int*) from,
+                        (unsigned int*) to,
+                        length,
                         0,
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC);
 
-  dma_enqueue_operation(BG,
-                        (unsigned int*)(ctx.pfb + ctx.size - line_height),
-                        line_height,
-                        0,
-                        DMA_TI_DEST_INC);
+  {
+      unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
+      BG[0] = GET_BG32(ctx);
+      BG[1] = BG[0];
+      BG[2] = BG[0];
+      BG[3] = BG[0];
+
+      dma_enqueue_operation(BG,
+                            (unsigned int*)(ctx.pfb + (end_line - lines + 1) * pixels_per_line),
+                            lines * pixels_per_line,
+                            0,
+                            DMA_TI_DEST_INC);
+  }
 
   dma_execute_queue_and_wait();
 }
 
+/*
 void
-gfx_scroll_down(unsigned int npixels)
+gfx_scroll_down(unsigned int start_line,
+                unsigned int end_line,
+                unsigned int lines)
 {
+  unsigned int npixels = ctx.font_height;
   unsigned int* pf_dst = (unsigned int*)(ctx.pfb + ctx.size) - 1;
   unsigned int* pf_src =
     (unsigned int*)(ctx.pfb + ctx.size - ctx.pitch * npixels) - 1;
@@ -328,6 +340,7 @@ gfx_scroll_down(unsigned int npixels)
   while (pf_dst >= pfb_end)
     *pf_dst-- = BG;
 }
+*/
 
 void
 gfx_fill_rect_dma(unsigned int x,
@@ -557,7 +570,7 @@ gfx_term_putstring(const char* str)
     if (ctx.term.cursor_row >= ctx.term.rows) {
       ctx.term.cursor_row = ctx.term.rows - 1;
 
-      gfx_scroll_up(ctx.font_height);
+      gfx_scroll_up(ctx.term.scrolling_region_start, ctx.term.scrolling_region_end, 1);
     }
 
     ++str;
