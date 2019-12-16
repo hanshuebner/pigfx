@@ -124,9 +124,9 @@ rotate_baudrate()
       i = 0;
   }
 
-  gfx_term_putstring("\r\x1b[2K[Terminal at ");
-  gfx_term_putstring(u2s(baud[i]));
-  gfx_term_putstring(" baud]\n");
+  gfx_term_putstring("\r\x1b[2K[Terminal at ", 0);
+  gfx_term_putstring(u2s(baud[i]), 0);
+  gfx_term_putstring(" baud]\n", 0);
   uart0_setbaud(baud[i]);
 }
 
@@ -144,7 +144,7 @@ _keypress_handler(const char* str)
 
     // special casees: print screen clears screen, F12 toggles font
     if (ch == 0xFF) {
-      gfx_term_putstring("\x1b[2J");
+      gfx_term_putstring("\x1b[2J", 0);
       ch = 0;
     } else if (ch == 0xFE) {
       gfx_toggle_font_height();
@@ -347,12 +347,23 @@ term_main_loop()
 
   while (1) {
     if (!DMA_CHAN0_BUSY && uart_buffer_start != uart_buffer_end) {
+#if 0
       strb[0] = *uart_buffer_start++;
       if (uart_buffer_start >= uart_buffer_limit) {
         uart_buffer_start = uart_buffer;
       }
 
-      gfx_term_putstring(strb);
+      gfx_term_putstring(strb, 0);
+#endif
+      volatile const char* p = uart_buffer_start;
+      uart_buffer_start = uart_buffer_end;
+      if (p > uart_buffer_end) {
+        gfx_term_putstring(p, uart_buffer_limit - p);
+        p = uart_buffer;
+      }
+      if (uart_buffer_end > p) {
+        gfx_term_putstring(p, uart_buffer_end - p);
+      }
     }
 
     uart_fill_queue(0);
@@ -375,7 +386,7 @@ entry_point()
 
   initialize_framebuffer();
 
-  gfx_term_putstring("\x1B[2J"); // Clear screen
+  gfx_term_putstring("\x1B[2J", 0); // Clear screen
 
   timers_init();
   attach_timer_handler(HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);

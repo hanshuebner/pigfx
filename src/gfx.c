@@ -520,12 +520,17 @@ gfx_term_render_cursor()
  */
 
 void
-gfx_term_putstring(const char* str)
+gfx_term_putstring(volatile const char* str,
+                   unsigned int length)
 {
+  if (length == 0) {
+    length = strlen((char*) str);
+  }
+  
   gfx_restore_cursor_content();
 
-  while (*str) {
-    switch (*str) {
+  for (unsigned int i = 0; i < length; i++) {
+    switch (str[i]) {
       case '\r':
         ctx.term.cursor_column = 0;
         break;
@@ -554,7 +559,7 @@ gfx_term_putstring(const char* str)
         break;
 
       default:
-        ctx.term.state.next(*str, &(ctx.term.state));
+        ctx.term.state.next(str[i], &(ctx.term.state));
         break;
     }
 
@@ -572,8 +577,6 @@ gfx_term_putstring(const char* str)
 
       gfx_scroll_up(ctx.term.scrolling_region_start, ctx.term.scrolling_region_end, 1);
     }
-
-    ++str;
   }
   gfx_term_render_cursor();
 }
