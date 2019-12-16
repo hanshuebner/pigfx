@@ -46,13 +46,13 @@ gfx_clear_rect(unsigned int x,
                unsigned int height);
 
 /*!
- * Scrolls the entire framebuffer down (adding background color at the bottom)
+ * Scrolls the entire framebuffer down (adding background color at the top)
  */
 extern void
 gfx_scroll_down(unsigned int npixels);
 
 /*!
- * Scrolls the entire framebuffer up (adding background color at the top)
+ * Scrolls the entire framebuffer up (adding background color at the bottom)
  */
 extern void
 gfx_scroll_up(unsigned int npixels);

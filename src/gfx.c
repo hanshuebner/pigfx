@@ -287,7 +287,7 @@ gfx_clear()
 }
 
 void
-gfx_scroll_down_dma(unsigned int npixels)
+gfx_scroll_up(unsigned int npixels)
 {
   unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
   *BG = GET_BG32(ctx);
@@ -307,17 +307,12 @@ gfx_scroll_down_dma(unsigned int npixels)
                         line_height,
                         0,
                         DMA_TI_DEST_INC);
-}
 
-void
-gfx_scroll_down(unsigned int npixels)
-{
-  gfx_scroll_down_dma(npixels);
   dma_execute_queue_and_wait();
 }
 
 void
-gfx_scroll_up(unsigned int npixels)
+gfx_scroll_down(unsigned int npixels)
 {
   unsigned int* pf_dst = (unsigned int*)(ctx.pfb + ctx.size) - 1;
   unsigned int* pf_src =
@@ -562,8 +557,7 @@ gfx_term_putstring(const char* str)
     if (ctx.term.cursor_row >= ctx.term.rows) {
       ctx.term.cursor_row = ctx.term.rows - 1;
 
-      gfx_scroll_down_dma(ctx.font_height);
-      dma_execute_queue_and_wait();
+      gfx_scroll_up(ctx.font_height);
     }
 
     ++str;
