@@ -494,11 +494,10 @@ gfx_restore_cursor_content()
 }
 
 void
-gfx_term_render_cursor()
+gfx_save_cursor_content()
 {
-  // Save framebuffer content that is going to be replaced by the cursor and
-  // update the new content
-  //
+  // Save framebuffer content that is going to be replaced by the cursor
+
   unsigned char* pb = ctx.cursor_buffer;
   unsigned char* pfb = PFB(ctx.term.cursor_column * ctx.font_width,
                            ctx.term.cursor_row * ctx.font_height);
@@ -506,11 +505,33 @@ gfx_term_render_cursor()
   for (int y = 0; y < ctx.font_height; y++) {
     for (int x = 0; x < ctx.font_width; x++) {
       *pb++ = pfb[x];
-      if (ctx.term.cursor_visible && ctx.term.cursor_blink_state) {
-        pfb[x] = ctx.cursor_color;
-      }
     }
     pfb += ctx.pitch;
+  }
+}
+
+void
+gfx_term_render_cursor()
+{
+  static int old_cursor_blink_state;
+
+  if (old_cursor_blink_state != ctx.term.cursor_blink_state) {
+    unsigned char* pb = ctx.cursor_buffer;
+    unsigned char* pfb = PFB(ctx.term.cursor_column * ctx.font_width,
+                             ctx.term.cursor_row * ctx.font_height);
+
+    for (int y = 0; y < ctx.font_height; y++) {
+      for (int x = 0; x < ctx.font_width; x++) {
+        if (ctx.term.cursor_visible && ctx.term.cursor_blink_state) {
+          pfb[x] = ctx.cursor_color;
+        } else {
+          pfb[x] = *pb++;
+        }
+      }
+      pfb += ctx.pitch;
+    }
+
+    old_cursor_blink_state = ctx.term.cursor_blink_state;
   }
 }
 
@@ -578,7 +599,8 @@ gfx_term_putstring(volatile const char* str,
       gfx_scroll_up(ctx.term.scrolling_region_start, ctx.term.scrolling_region_end, 1);
     }
   }
-  gfx_term_render_cursor();
+
+  gfx_save_cursor_content();
 }
 
 void

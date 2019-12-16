@@ -174,9 +174,7 @@ _heartbeat_timer_handler(__attribute__((unused)) unsigned hnd,
     led_status = 1;
   }
 
-  // The heartbeat routine is not called reliably, cursor blinking
-  // does not work for that reason at the moment
-  // gfx_term_blink_cursor();
+  gfx_term_blink_cursor();
 
   attach_timer_handler(1000 / HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
 }
@@ -343,18 +341,8 @@ video_line_test()
 void
 term_main_loop()
 {
-  char strb[2] = { 0, 0 };
-
   while (1) {
     if (!DMA_CHAN0_BUSY && uart_buffer_start != uart_buffer_end) {
-#if 0
-      strb[0] = *uart_buffer_start++;
-      if (uart_buffer_start >= uart_buffer_limit) {
-        uart_buffer_start = uart_buffer;
-      }
-
-      gfx_term_putstring(strb, 0);
-#endif
       volatile const char* p = uart_buffer_start;
       uart_buffer_start = uart_buffer_end;
       if (p > uart_buffer_end) {
@@ -368,6 +356,7 @@ term_main_loop()
 
     uart_fill_queue(0);
     timer_poll();
+    gfx_term_render_cursor();
   }
 }
 

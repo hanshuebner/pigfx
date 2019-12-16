@@ -52,6 +52,7 @@ gfx_clear_rect(unsigned int x,
 extern void gfx_term_putstring(volatile const char* str, unsigned int length);
 extern void gfx_term_set_cursor_visibility(int);
 extern void gfx_term_blink_cursor();
+extern void gfx_term_render_cursor();
 extern void gfx_term_move_cursor(int row, int col);
 extern void gfx_term_save_cursor();
 extern void gfx_term_restore_cursor();
