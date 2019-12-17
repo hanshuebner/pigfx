@@ -5,6 +5,7 @@
 #define DMA_BASE 0x20007000
 #define DMA_CS_OFFSET 0x00
 #define DMA_CONBLK_AD_OFFSET 0x01
+#define DMA_BLOCK_COUNT 128
 // https://www.raspberrypi.org/forums/viewtopic.php?f=72&t=10276
 
 typedef struct _DMA_Ctrl_Block
@@ -20,7 +21,7 @@ typedef struct _DMA_Ctrl_Block
 
 } DMA_Control_Block;
 
-DMA_Control_Block __attribute__((aligned(0x100))) ctr_blocks[128];
+DMA_Control_Block __attribute__((aligned(0x100))) ctr_blocks[DMA_BLOCK_COUNT];
 unsigned int curr_blk;
 
 void
@@ -36,7 +37,7 @@ dma_enqueue_operation(unsigned int* src,
                       unsigned int stride,
                       unsigned int TRANSFER_INFO)
 {
-  if (curr_blk == 16)
+  if (curr_blk == DMA_BLOCK_COUNT)
     return 0;
 
   DMA_Control_Block* blk =
