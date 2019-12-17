@@ -296,12 +296,13 @@ gfx_scroll_up(unsigned int start_line,
   unsigned char* to = ctx.pfb + start_line * pixels_per_line;
   unsigned int length = (end_line - start_line - lines + 1) * pixels_per_line;
 
-  dma_enqueue_operation((unsigned int*) from,
-                        (unsigned int*) to,
-                        length,
-                        0,
-                        DMA_TI_SRC_INC | DMA_TI_DEST_INC);
-
+  if (length) {
+    dma_enqueue_operation((unsigned int*) from,
+                          (unsigned int*) to,
+                          length,
+                          0,
+                          DMA_TI_SRC_INC | DMA_TI_DEST_INC);
+  }
   {
       unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
       BG[0] = GET_BG32(ctx);
@@ -319,28 +320,37 @@ gfx_scroll_up(unsigned int start_line,
   dma_execute_queue_and_wait();
 }
 
-/*
-void
+static void
 gfx_scroll_down(unsigned int start_line,
                 unsigned int end_line,
                 unsigned int lines)
 {
-  unsigned int npixels = ctx.font_height;
-  unsigned int* pf_dst = (unsigned int*)(ctx.pfb + ctx.size) - 1;
-  unsigned int* pf_src =
-    (unsigned int*)(ctx.pfb + ctx.size - ctx.pitch * npixels) - 1;
-  const unsigned int* const pfb_end = (unsigned int*)(ctx.pfb);
+  unsigned int pixels_per_line = ctx.font_height * ctx.pitch;
+  lines = MIN(lines, end_line - start_line);
+  for (unsigned int line_to_move = end_line - lines; line_to_move >= start_line; line_to_move--) {
+    unsigned char* from = ctx.pfb + line_to_move * pixels_per_line;
+    unsigned char* to = ctx.pfb + (line_to_move + lines) * pixels_per_line;
+    dma_enqueue_operation((unsigned int*) from,
+                          (unsigned int*) to,
+                          pixels_per_line,
+                          0,
+                          DMA_TI_SRC_INC | DMA_TI_DEST_INC);
+  }
+  {
+      unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
+      BG[0] = GET_BG32(ctx);
+      BG[1] = BG[0];
+      BG[2] = BG[0];
+      BG[3] = BG[0];
 
-  while (pf_src >= pfb_end)
-    *pf_dst-- = *pf_src--;
-
-  // Fill with bg at the top
-  const unsigned int BG = GET_BG32(ctx);
-
-  while (pf_dst >= pfb_end)
-    *pf_dst-- = BG;
+      dma_enqueue_operation(BG,
+                            (unsigned int*)(ctx.pfb + start_line * pixels_per_line),
+                            lines * pixels_per_line,
+                            0,
+                            DMA_TI_DEST_INC);
+  }
+  dma_execute_queue_and_wait();
 }
-*/
 
 void
 gfx_fill_rect_dma(unsigned int x,
@@ -798,7 +808,11 @@ state_fun_final_letter(char ch, scn_state* state)
       /* 4.11 Editing commands */
 
     case 'L': // Insert Line (IL)
-      if (state->cmd_params_size == 1 && in_scrolling_region()) {
+      if (in_scrolling_region()) {
+        gfx_scroll_down(ctx.term.cursor_row,
+                        ctx.term.scrolling_region_end,
+                        MIN(state->cmd_params_size ? state->cmd_params[0] : 1,
+                            ctx.term.scrolling_region_end - ctx.term.cursor_row));
       }
       goto back_to_normal;
 
