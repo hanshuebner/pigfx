@@ -586,10 +586,9 @@ gfx_term_putstring(volatile const char* str,
         handle_autoscroll();
         break;
 
-      case 0x09: /* tab */
-        ctx.term.cursor_column += 1;
-        ctx.term.cursor_column = MIN(ctx.term.cursor_column + ctx.font_width - ctx.term.cursor_column % ctx.font_width,
-                                     ctx.term.columns - 1);
+      case 0x09:
+        /* tab */
+        ctx.term.cursor_column = MIN(((ctx.term.cursor_column / 8) + 1) * 8, ctx.term.columns - 1);
         break;
 
       case 0x08:
@@ -725,7 +724,7 @@ state_fun_final_letter(char ch, scn_state* state)
       if (state->private_mode_char == '?' && state->cmd_params_size == 1) {
         int on_or_off = ch == 'h';
         switch (state->cmd_params[0]) {
-          case 6:
+          case 7:
             gfx_term_set_wraparound(on_or_off);
             break;
           case 25:
