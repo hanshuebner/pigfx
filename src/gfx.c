@@ -803,7 +803,11 @@ state_fun_final_letter(char ch, scn_state* state)
       goto back_to_normal;
 
     case 'M': // Delete Line (DL)
-      if (state->cmd_params_size == 1 && in_scrolling_region()) {
+      if (in_scrolling_region()) {
+        gfx_scroll_up(ctx.term.cursor_row,
+                      ctx.term.scrolling_region_end,
+                      MIN(state->cmd_params_size ? state->cmd_params[0] : 1,
+                          ctx.term.scrolling_region_end - ctx.term.cursor_row));
       }
       goto back_to_normal;
 
