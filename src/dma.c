@@ -20,7 +20,7 @@ typedef struct _DMA_Ctrl_Block
 
 } DMA_Control_Block;
 
-DMA_Control_Block __attribute__((aligned(0x100))) ctr_blocks[16];
+DMA_Control_Block __attribute__((aligned(0x100))) ctr_blocks[128];
 unsigned int curr_blk;
 
 void
