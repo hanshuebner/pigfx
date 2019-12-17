@@ -535,6 +535,21 @@ gfx_term_render_cursor()
   }
 }
 
+void
+handle_autoscroll()
+{
+  unsigned int previous_row = ctx.term.cursor_row - 1;
+  if (previous_row >= ctx.term.scrolling_region_start
+      && previous_row <= ctx.term.scrolling_region_end
+      && ctx.term.cursor_row >= ctx.term.scrolling_region_end) {
+    ctx.term.cursor_row = ctx.term.scrolling_region_end - 1;
+
+    gfx_scroll_up(ctx.term.scrolling_region_start, ctx.term.scrolling_region_end, 1);
+  } else {
+    ctx.term.cursor_row = MIN(ctx.term.rows - 1, ctx.term.cursor_row);
+  }
+}
+
 /* gfx_term_putstring is the main entry point to the terminal
  * emulator.  Everything that is displayed on the screen goes through
  * this function
@@ -558,12 +573,12 @@ gfx_term_putstring(volatile const char* str,
 
       case '\n':
         ctx.term.cursor_row++;
+        handle_autoscroll();
         break;
 
       case 0x09: /* tab */
         ctx.term.cursor_column += 1;
-        ctx.term.cursor_column = MIN(ctx.term.cursor_column + ctx.font_width -
-                                       ctx.term.cursor_column % ctx.font_width,
+        ctx.term.cursor_column = MIN(ctx.term.cursor_column + ctx.font_width - ctx.term.cursor_column % ctx.font_width,
                                      ctx.term.columns - 1);
         break;
 
@@ -591,12 +606,7 @@ gfx_term_putstring(volatile const char* str,
       } else {
         ctx.term.cursor_column = ctx.term.columns - 1;
       }
-    }
-
-    if (ctx.term.cursor_row >= ctx.term.rows) {
-      ctx.term.cursor_row = ctx.term.rows - 1;
-
-      gfx_scroll_up(ctx.term.scrolling_region_start, ctx.term.scrolling_region_end, 1);
+      handle_autoscroll();
     }
   }
 
@@ -919,6 +929,9 @@ state_fun_final_letter(char ch, scn_state* state)
           ctx.term.scrolling_region_start = start - 1;
           ctx.term.scrolling_region_end = end - 1;
         }
+      } else {
+        ctx.term.scrolling_region_start = 0;
+        ctx.term.scrolling_region_end = ctx.term.rows - 1;
       }
 
       goto back_to_normal;
