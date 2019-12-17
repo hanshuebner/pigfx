@@ -9,6 +9,8 @@
 #include "uart.h"
 #include "utils.h"
 
+#define MAX_COLUMNS 256
+
 extern unsigned char G_FONT_GLYPHS08;
 extern unsigned char G_FONT_GLYPHS14;
 extern unsigned char G_FONT_GLYPHS16;
@@ -87,6 +89,8 @@ typedef struct
     unsigned int scrolling_region_start;
     unsigned int scrolling_region_end;
 
+    unsigned char tabstops[MAX_COLUMNS];
+
     int cursor_blink_state;
 
     scn_state state;
@@ -97,8 +101,6 @@ typedef struct
   GFX_COL cursor_color;
   unsigned int inverse;
   unsigned char line_attributes[255];
-
-  unsigned int line_limit;
 
   int font_height;
   int font_width;
@@ -157,11 +159,7 @@ gfx_set_screen_geometry()
   unsigned int lines, border_top_bottom = 0;
 
   lines = ctx.full_height / ctx.font_height;
-  if (ctx.line_limit > 0 && ctx.line_limit < lines)
-    lines = ctx.line_limit;
   border_top_bottom = (ctx.full_height - (lines * ctx.font_height)) / 2;
-  if (ctx.line_limit == 0 && border_top_bottom == 0)
-    border_top_bottom = ctx.font_height / 2;
 
   gfx_clear();
 
@@ -195,8 +193,33 @@ gfx_set_font_height(unsigned int h)
       break;
   }
 
-  ctx.line_limit = MIN(ctx.line_limit, ctx.full_height / h);
   gfx_set_screen_geometry();
+}
+
+static void
+reset_terminal()
+{
+  ctx.term.cursor_visible = 1;
+  ctx.term.wraparound = 1;
+  ctx.term.scrolling_region_start = 0;
+  ctx.term.scrolling_region_end = ctx.term.rows - 1;
+
+  ctx.bg = 0;
+  ctx.fg = 15;
+  ctx.cursor_color = 9;
+  ctx.inverse = 0;
+
+  for (unsigned int i = 0; i < sizeof(ctx.line_attributes); i++) {
+    ctx.line_attributes[i] = 0;
+  }
+
+  for (unsigned int i = 0; i < sizeof(ctx.term.tabstops); i++) {
+    ctx.term.tabstops[i] = (i % 8) ? 0 : 1;
+  }
+
+  gfx_term_reset_attrib();
+  gfx_term_move_cursor(0, 0);
+  gfx_term_clear_screen();
 }
 
 void
@@ -218,24 +241,11 @@ gfx_set_env(void* p_framebuffer,
 
   ctx.term.columns = ctx.width / ctx.font_width;
 
-  ctx.term.cursor_visible = 1;
-  ctx.term.wraparound = 1;
-  ctx.term.scrolling_region_start = 0;
-  ctx.term.scrolling_region_end = ctx.term.rows - 1;
-
   ctx.term.cursor_blink_state = 1;
 
   ctx.term.state.next = state_fun_normaltext;
 
-  ctx.bg = 0;
-  ctx.fg = 15;
-  ctx.cursor_color = 9;
-  ctx.inverse = 0;
-  ctx.line_limit = SCREEN_LINES;
-
-  for (unsigned int i = 0; i < sizeof(ctx.line_attributes); i++) {
-    ctx.line_attributes[i] = 0;
-  }
+  reset_terminal();
 }
 
 void
@@ -588,7 +598,10 @@ gfx_term_putstring(volatile const char* str,
 
       case 0x09:
         /* tab */
-        ctx.term.cursor_column = MIN(((ctx.term.cursor_column / 8) + 1) * 8, ctx.term.columns - 1);
+        while (ctx.term.cursor_column < MIN(ctx.term.columns, sizeof(ctx.term.tabstops) -1)
+               && !ctx.term.tabstops[++ctx.term.cursor_column])
+          ;
+        ctx.term.cursor_column = MIN(ctx.term.cursor_column, ctx.term.columns - 1);
         break;
 
       case 0x08:
@@ -834,6 +847,17 @@ state_fun_final_letter(char ch, scn_state* state)
       }
       goto back_to_normal;
 
+    case 'Z': // Cursor Backward Tabulation (CBT)
+      {
+        unsigned int count = state->cmd_params_size ? state->cmd_params[0] : 1;
+        while (count--) {
+          while (ctx.term.cursor_column > 0
+                 && !ctx.term.tabstops[--ctx.term.cursor_column])
+            ;
+        }
+      }
+      goto back_to_normal;
+
     case 'm': {
       if (state->cmd_params_size == 0)
         gfx_term_reset_attrib();
@@ -1044,9 +1068,7 @@ state_fun_waitsquarebracket(char ch, scn_state* state)
     gfx_putc(ch);
   } else if (ch == 'c') {
     // ESC-c resets terminal
-    gfx_term_reset_attrib();
-    gfx_term_move_cursor(0, 0);
-    gfx_term_clear_screen();
+    reset_terminal();
   }
 
   state->next = state_fun_normaltext;
