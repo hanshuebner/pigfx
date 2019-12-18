@@ -191,10 +191,14 @@ gfx_putc(unsigned row,
   unsigned char* p_glyph = (unsigned char*)(ctx.font_data + (c * ctx.font_width * ctx.font_height));
   unsigned char* pf = PFB((column * ctx.font_width),
                           (row * ctx.font_height));
+  unsigned char* pb = (row == ctx.cursor_row && column == ctx.cursor_column) ? ctx.cursor_buffer : 0;
 
   for (int y = 0; y < ctx.font_height; y++) {
     for (int x = 0; x < ctx.font_width; x++) {
       pf[x] = *p_glyph++ ? foreground_color : background_color;
+      if (pb) {
+        *pb++ =  pf[x];
+      }
     }
     pf += ctx.pitch;
   }
@@ -243,6 +247,7 @@ gfx_set_cursor(unsigned int row,
   gfx_restore_cursor_content(ctx.cursor_row, ctx.cursor_column);
   ctx.cursor_row = row;
   ctx.cursor_column = column;
+  gfx_save_cursor_content(row, column);
 }
 
 void

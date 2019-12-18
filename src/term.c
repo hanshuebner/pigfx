@@ -30,7 +30,10 @@ term_damage(VTermRect rect, __unused void* user)
     for (pos.col = rect.start_col; pos.col < rect.end_col; pos.col++) {
       VTermScreenCell cell;
       vterm_screen_get_cell(screen, pos, &cell);
-      gfx_putc(pos.row, pos.col, cell.chars[0], 15, 0);
+      int color = cell.attrs.bold ? 15 : 7;
+      int fg = cell.attrs.reverse ? 0 : color;
+      int bg = cell.attrs.reverse ? color : 0;
+      gfx_putc(pos.row, pos.col, cell.chars[0], fg, bg);
     }
   }
   return 1;
