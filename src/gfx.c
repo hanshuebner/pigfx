@@ -161,6 +161,25 @@ gfx_scroll_down(unsigned int start_line,
 }
 
 void
+gfx_move_rect(unsigned int from_row,
+              unsigned int from_column,
+              unsigned int to_row,
+              unsigned int to_column,
+              unsigned int rows,
+              unsigned int columns,
+              GFX_COL background_color)
+{
+  unsigned int width = columns * ctx.font_width;
+  unsigned int height = rows * ctx.font_height;
+  dma_enqueue_operation((unsigned int*)(PFB(from_column * ctx.font_width, from_row * ctx.font_height)),
+                        (unsigned int*)(PFB(to_column * ctx.font_width, to_row * ctx.font_height)),
+                        ((height & 0xFFFF) << 16) | (width & 0xFFFF),
+                        ((ctx.pitch - width) & 0xFFFF) << 16 | (ctx.pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
+                        DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
+  dma_execute_queue_and_wait();
+}
+
+void
 gfx_fill_rect(unsigned int x,
               unsigned int y,
               unsigned int width,

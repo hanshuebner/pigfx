@@ -14,7 +14,8 @@ term_init(unsigned int rows, unsigned int columns)
   static VTermScreenCallbacks callbacks =
     {
      .damage = term_damage,
-     .movecursor = term_movecursor
+     .movecursor = term_movecursor,
+     .moverect = term_moverect
     };
 
   vterm_screen_set_callbacks(screen, &callbacks, 0);
@@ -44,4 +45,21 @@ term_movecursor(VTermPos position, __unused VTermPos oldPosition, int visible, _
 {
   gfx_set_cursor(position.row, position.col, visible);
   return 1;
+}
+
+int
+term_moverect(VTermRect dest, VTermRect src, __unused void *user)
+{
+  if (src.start_row < dest.start_row
+      || src.start_col < dest.start_col) {
+    // scroll down or right, not implemented yet.
+    return 0;
+  } else {
+    gfx_move_rect(src.start_row, src.start_col,
+                  dest.start_row, dest.start_col,
+                  src.end_row - src.start_row,
+                  src.end_col - src.start_col,
+                  0);
+    return 1;
+  }
 }
