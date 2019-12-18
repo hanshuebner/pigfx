@@ -17,4 +17,9 @@ extern void gfx_fill_rect(unsigned int x,
                           unsigned int height,
                           GFX_COL color);
 
+extern void gfx_set_cursor(unsigned int row,
+                           unsigned int column,
+                           unsigned int visible);
+extern void gfx_handle_cursor();
+
 #endif

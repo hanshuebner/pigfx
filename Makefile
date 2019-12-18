@@ -7,7 +7,8 @@ CFLAGS = -Wall -Wextra $(LIBVTERM_CFLAGS)
 ## Important!!! asm.o must be the first object to be linked!
 OOB = 	asm.o pigfx.o uart.o irq.o hwutils.o timer.o framebuffer.o postman.o \
 	console.o gfx.o dma.o nmalloc.o uspios_wrapper.o ee_printf.o \
-	raspihwconfig.o stupid_timer.o binary_assets.o term.o
+	raspihwconfig.o stupid_timer.o binary_assets.o term.o \
+	syscall_stubs.o
 
 BUILD_DIR = build
 SRC_DIR = src

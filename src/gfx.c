@@ -4,6 +4,7 @@
 #include "gfx.h"
 #include "dma.h"
 #include "hwutils.h"
+#include "timer.h"
 
 extern unsigned char G_FONT_GLYPHS;
 
@@ -26,6 +27,9 @@ typedef struct
   int font_width;
   unsigned char* font_data;
 
+  unsigned int cursor_row;
+  unsigned int cursor_column;
+  unsigned int cursor_color;
   unsigned char cursor_buffer[10 * 20];
 } FRAMEBUFFER_CTX;
 
@@ -68,6 +72,10 @@ gfx_set_env(void* p_framebuffer,
   ctx.pfb = ctx.full_pfb + (border_top_bottom * ctx.pitch);
   ctx.height = ctx.full_height - (border_top_bottom * 2);
   ctx.size = ctx.full_size - (border_top_bottom * 2 * ctx.pitch);
+
+  ctx.cursor_row = 0;
+  ctx.cursor_column = 0;
+  ctx.cursor_color = 9;
 }
 
 void
@@ -227,20 +235,30 @@ gfx_save_cursor_content(unsigned int row,
   }
 }
 
-/*
 void
-gfx_term_render_cursor()
+gfx_set_cursor(unsigned int row,
+               unsigned int column,
+               __unused unsigned int visible)
+{
+  gfx_restore_cursor_content(ctx.cursor_row, ctx.cursor_column);
+  ctx.cursor_row = row;
+  ctx.cursor_column = column;
+}
+
+void
+gfx_handle_cursor()
 {
   static int old_cursor_blink_state;
+  int cursor_blink_state = (time_microsec() % 800000) > 400000;
 
-  if (old_cursor_blink_state != ctx.term.cursor_blink_state) {
+  if (old_cursor_blink_state != cursor_blink_state) {
     unsigned char* pb = ctx.cursor_buffer;
-    unsigned char* pfb = PFB(ctx.term.cursor_column * ctx.font_width,
-                             ctx.term.cursor_row * ctx.font_height);
+    unsigned char* pfb = PFB(ctx.cursor_column * ctx.font_width,
+                             ctx.cursor_row * ctx.font_height);
 
     for (int y = 0; y < ctx.font_height; y++) {
       for (int x = 0; x < ctx.font_width; x++) {
-        if (ctx.term.cursor_visible && ctx.term.cursor_blink_state) {
+        if (cursor_blink_state) {
           pfb[x] = ctx.cursor_color;
         } else {
           pfb[x] = *pb++;
@@ -249,8 +267,6 @@ gfx_term_render_cursor()
       pfb += ctx.pitch;
     }
 
-    old_cursor_blink_state = ctx.term.cursor_blink_state;
+    old_cursor_blink_state = cursor_blink_state;
   }
 }
-
-*/
