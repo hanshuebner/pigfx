@@ -1,7 +1,7 @@
 #include "irq.h"
 
 #include "ee_printf.h"
-#include "utils.h"
+#include "hwutils.h"
 
 rpi_irq_controller_t* pIRQController =
   (rpi_irq_controller_t*)RPI_INTERRUPT_CONTROLLER_BASE;

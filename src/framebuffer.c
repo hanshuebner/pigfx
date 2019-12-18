@@ -3,7 +3,7 @@
 #include "console.h"
 #include "pigfx_config.h"
 #include "postman.h"
-#include "utils.h"
+#include "hwutils.h"
 
 static const unsigned int xterm_colors[256] = {
   0x000000, 0x800000, 0x008000, 0x808000, 0x000080, 0x800080, 0x008080,
@@ -424,7 +424,7 @@ fb_get_pitch(unsigned int* pPitch)
 }
 
 FB_RETURN_TYPE
-fb_get_phisical_buffer_size(unsigned int* pWidth, unsigned int* pHeight)
+fb_get_physical_buffer_size(unsigned int* pWidth, unsigned int* pHeight)
 {
   volatile unsigned int pBuffData[256] __attribute__((aligned(16)));
   unsigned int off;

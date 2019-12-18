@@ -43,7 +43,7 @@ GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
 
 #include "gfx.h"
 #include "uart.h"
-#include "utils.h"
+#include "hwutils.h"
 
 #define size_t unsigned int
 

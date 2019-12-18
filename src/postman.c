@@ -2,7 +2,7 @@
 
 #include "pigfx_config.h"
 #include "timer.h"
-#include "utils.h"
+#include "hwutils.h"
 
 #define MAPPED_REGISTERS_BASE 0x20000000
 

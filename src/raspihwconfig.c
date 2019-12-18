@@ -2,7 +2,7 @@
 
 #include "postman.h"
 #include "timer.h"
-#include "utils.h"
+#include "hwutils.h"
 
 RHW_RETURN_TYPE
 rhw_get_mac_address(unsigned char* pOutAddr)

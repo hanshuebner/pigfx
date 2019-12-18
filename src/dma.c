@@ -1,6 +1,6 @@
 #include "dma.h"
 
-#include "utils.h"
+#include "hwutils.h"
 
 #define DMA_BASE 0x20007000
 #define DMA_CS_OFFSET 0x00

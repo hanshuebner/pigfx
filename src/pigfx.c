@@ -12,7 +12,8 @@
 #include "pigfx_config.h"
 #include "timer.h"
 #include "uart.h"
-#include "utils.h"
+#include "term.h"
+#include "hwutils.h"
 
 #define GPFSEL1 0x20200004
 #define GPSET0 0x2020001C
@@ -34,7 +35,8 @@ volatile char* uart_buffer_limit;
 extern unsigned int pheap_space;
 extern unsigned int heap_sz;
 
-VTerm *vterm;
+VTerm *term;
+VTermScreen *screen;
 
 /* ---------------------------------------------------------------------------------------------------
  */
@@ -195,18 +197,27 @@ initialize_framebuffer()
 
   fb_set_xterm_palette();
 
-  // cout("fb addr: ");cout_h((unsigned int)p_fb);cout_endl();
-  // cout("fb size: ");cout_d((unsigned int)fbsize);cout(" bytes");cout_endl();
-  // cout("  pitch: ");cout_d((unsigned int)pitch);cout_endl();
-
-  if (fb_get_phisical_buffer_size(&p_w, &p_h) != FB_SUCCESS) {
-    // cout("fb_get_phisical_buffer_size error");cout_endl();
+  if (fb_get_physical_buffer_size(&p_w, &p_h) != FB_SUCCESS) {
   }
-  // cout("phisical fb size: "); cout_d(p_w); cout("x"); cout_d(p_h);
-  // cout_endl();
 
   usleep(10000);
+
   gfx_set_env(p_fb, v_w, v_h, pitch, fbsize);
+
+  // fixme hard coded font size
+  term = vterm_new(p_w / 10, p_h / 20);
+
+  screen = vterm_obtain_screen(term);
+
+  static VTermScreenCallbacks callbacks =
+    {
+     .damage = &term_damage,
+     .movecursor = &term_movecursor
+    };
+  
+  vterm_screen_set_callbacks(screen, &callbacks, 0);
+  vterm_screen_enable_altscreen(screen, 1);
+  vterm_screen_reset(screen, 1);
 }
 
 void
@@ -217,11 +228,11 @@ term_main_loop()
       const char* p = (const char*) uart_buffer_start;
       uart_buffer_start = uart_buffer_end;
       if (p > uart_buffer_end) {
-        vterm_input_write(vterm, p, uart_buffer_limit - p);
+        vterm_input_write(term, p, uart_buffer_limit - p);
         p = (const char*) uart_buffer;
       }
       if (uart_buffer_end > p) {
-        vterm_input_write(vterm, p, uart_buffer_end - p);
+        vterm_input_write(term, p, uart_buffer_end - p);
       }
     }
 
@@ -231,7 +242,7 @@ term_main_loop()
 }
 
 void
-entry_point()
+term_initialize()
 {
   // Heap init
   nmalloc_set_memory_area((unsigned char*)(pheap_space), heap_sz);
@@ -256,6 +267,12 @@ entry_point()
   } else {
     ee_printf("USB initialization failed.\n");
   }
+}
 
+void
+entry_point()
+{
+  term_initialize();
+  
   term_main_loop();
 }

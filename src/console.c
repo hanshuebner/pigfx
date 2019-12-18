@@ -1,7 +1,7 @@
 #include "console.h"
 
 #include "uart.h"
-#include "utils.h"
+#include "hwutils.h"
 
 void
 cout(const char* str)

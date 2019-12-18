@@ -3,7 +3,7 @@
 
 #include "gfx.h"
 #include "dma.h"
-#include "utils.h"
+#include "hwutils.h"
 
 extern unsigned char G_FONT_GLYPHS;
 
@@ -44,24 +44,6 @@ dma_execute_queue_and_wait()
 }
 
 void
-gfx_set_screen_geometry()
-{
-  unsigned int lines, border_top_bottom = 0;
-
-  lines = ctx.full_height / ctx.font_height;
-  border_top_bottom = (ctx.full_height - (lines * ctx.font_height)) / 2;
-
-  // gfx_clear();
-
-  ctx.pfb = ctx.full_pfb + (border_top_bottom * ctx.pitch);
-  ctx.height = ctx.full_height - (border_top_bottom * 2);
-  ctx.size = ctx.full_size - (border_top_bottom * 2 * ctx.pitch);
-
-  // ctx.term.rows = ctx.height / ctx.font_height;
-  // ctx.term.cursor_row = ctx.term.cursor_column = 0;
-}
-
-void
 gfx_set_env(void* p_framebuffer,
             unsigned int width,
             unsigned int height,
@@ -80,10 +62,12 @@ gfx_set_env(void* p_framebuffer,
   ctx.font_width = 10;
   ctx.font_data = &G_FONT_GLYPHS;
 
-  gfx_set_screen_geometry();
+  unsigned int lines = ctx.full_height / ctx.font_height;
+  unsigned border_top_bottom = (ctx.full_height - (lines * ctx.font_height)) / 2;
 
-
-  // ctx.term.columns = ctx.width / ctx.font_width;
+  ctx.pfb = ctx.full_pfb + (border_top_bottom * ctx.pitch);
+  ctx.height = ctx.full_height - (border_top_bottom * 2);
+  ctx.size = ctx.full_size - (border_top_bottom * 2 * ctx.pitch);
 }
 
 void

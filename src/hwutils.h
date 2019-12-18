@@ -1,5 +1,5 @@
-#ifndef _PIGFX_UTILS_H_
-#define _PIGFX_UTILS_H_
+#ifndef _PIGFX_HWUTILS_H_
+#define _PIGFX_HWUTILS_H_
 
 extern void enable_irq();
 extern void disable_irq();
