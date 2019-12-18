@@ -18,11 +18,26 @@ _exit(__unused int status)
   }
 }
 
-caddr_t
-_sbrk(__unused int incr)
+extern caddr_t pheap_space;
+extern unsigned int heap_sz;
+static caddr_t heap_end;
+
+void
+heap_init()
 {
-  errno = ENOSYS;
-  return (caddr_t) -1;
+  heap_end = pheap_space + heap_sz;
+}
+
+caddr_t
+_sbrk(int incr)
+{
+  caddr_t space = pheap_space;
+  pheap_space += incr;
+  if (pheap_space >= heap_end) {
+    return (caddr_t) -1;
+  } else {
+    return space;
+  }
 }
 
 int

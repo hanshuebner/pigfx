@@ -1,22 +1,9 @@
 #include "../uspi/include/uspios.h"
 #include "ee_printf.h"
 #include "irq.h"
-#include "nmalloc.h"
 #include "raspihwconfig.h"
 #include "timer.h"
 #include "uart.h"
-
-void*
-malloc(unsigned nSize) // result must be 4-byte aligned
-{
-  return nmalloc_malloc(nSize);
-}
-
-void
-free(void* pBlock)
-{
-  nmalloc_free(&pBlock);
-}
 
 void
 MsDelay(unsigned nMilliSeconds)

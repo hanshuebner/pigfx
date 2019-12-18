@@ -8,7 +8,6 @@
 #include "framebuffer.h"
 #include "gfx.h"
 #include "irq.h"
-#include "nmalloc.h"
 #include "pigfx_config.h"
 #include "timer.h"
 #include "uart.h"
@@ -31,9 +30,6 @@ volatile char* uart_buffer;
 volatile char* uart_buffer_start;
 volatile char* uart_buffer_end;
 volatile char* uart_buffer_limit;
-
-extern unsigned int pheap_space;
-extern unsigned int heap_sz;
 
 VTerm *term;
 VTermScreen *screen;
@@ -251,11 +247,12 @@ term_main_loop()
 void
 term_initialize()
 {
-  // Heap init
-  nmalloc_set_memory_area((unsigned char*)(pheap_space), heap_sz);
+  extern void heap_init();
+
+  heap_init();
 
   // UART buffer allocation
-  uart_buffer = (volatile char*)nmalloc_malloc(UART_BUFFER_SIZE);
+  uart_buffer = (volatile char*)malloc(UART_BUFFER_SIZE);
 
   uart_init();
   heartbeat_init();
