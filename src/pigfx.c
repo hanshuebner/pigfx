@@ -203,11 +203,7 @@ initialize_framebuffer()
   // fixme hard coded font size
   term = vterm_new(p_w / 10, p_h / 20);
 
-  gfx_fill_rect(100, 100, 100, 100, 9);
-
   screen = vterm_obtain_screen(term);
-
-  gfx_fill_rect(200, 200, 100, 100, 9);
 
   static VTermScreenCallbacks callbacks =
     {
@@ -215,8 +211,6 @@ initialize_framebuffer()
      .movecursor = term_movecursor
     };
   
-  gfx_fill_rect(300, 300, 100, 100, 9);
-
   vterm_screen_set_callbacks(screen, &callbacks, 0);
   vterm_screen_enable_altscreen(screen, 1);
   vterm_screen_reset(screen, 1);
