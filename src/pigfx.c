@@ -1,4 +1,7 @@
-#include "../uspi/include/uspi.h"
+
+#include <uspi.h>
+#include <vterm.h>
+
 #include "console.h"
 #include "dma.h"
 #include "ee_printf.h"
@@ -31,40 +34,14 @@ volatile char* uart_buffer_limit;
 extern unsigned int pheap_space;
 extern unsigned int heap_sz;
 
-char*
-u2s(unsigned int u)
-{
-  unsigned int i = 1, j = 0;
-  static char buffer[20];
-
-  if (u >= 1000000000)
-    i = 1000000000;
-  else {
-    while (u >= i)
-      i *= 10;
-    i /= 10;
-  }
-
-  while (i > 0) {
-    unsigned int d = u / i;
-    buffer[j++] = 48 + d;
-    u -= d * i;
-    i = i / 10;
-  }
-
-  buffer[j] = 0;
-  return buffer;
-}
+VTerm *vterm;
 
 /* ---------------------------------------------------------------------------------------------------
  */
 
 volatile unsigned int* UART0 = (volatile unsigned int*)0x20201000;
 
-static int baud[] = { 300,   600,   1200,  2400,   4800, 9600,
-                      19200, 38400, 57600, 115200, -1,   -1 };
-
-static void
+void
 uart0_setbaud(unsigned int baud)
 {
   unsigned int divider = 3000000 / baud;
@@ -82,7 +59,7 @@ uart0_setbaud(unsigned int baud)
   UART0[0x0c] |= 0x01;      // enable UART
 }
 
-static unsigned int
+unsigned int
 uart0_getbaud()
 {
   unsigned int f = (UART0[0x09] * 64) + (UART0[0x0a] & 63);
@@ -90,44 +67,6 @@ uart0_getbaud()
   if ((3000000 * 64) - (baud * f) >= f / 2)
     baud++;
   return baud;
-}
-
-static void
-add_initial_baudrate()
-{
-  int i, j, b = uart0_getbaud();
-
-  for (i = 0; baud[i] > 0; i++)
-    if (baud[i] > b - b / 100 && baud[i] < b + b / 100)
-      return;
-
-  for (j = 0; baud[j] > 0 && baud[j] < b + b / 100; j++)
-    ;
-  for (i = i; i > j; i--)
-    baud[i] = baud[i - 1];
-  baud[i] = b;
-}
-
-static void
-rotate_baudrate()
-{
-  int i, b = uart0_getbaud();
-
-  for (i = 0; baud[i] > 0 && baud[i] < b + b / 100; i++)
-    ;
-
-  if (baud[i] < 0)
-    i = 0;
-  else if (baud[i] == b) {
-    i++;
-    if (baud[i] < 0)
-      i = 0;
-  }
-
-  gfx_term_putstring("\r\x1b[2K[Terminal at ", 0);
-  gfx_term_putstring(u2s(baud[i]), 0);
-  gfx_term_putstring(" baud]\n", 0);
-  uart0_setbaud(baud[i]);
 }
 
 /* ---------------------------------------------------------------------------------------------------
@@ -139,25 +78,7 @@ _keypress_handler(const char* str)
   const char* c = str;
 
   while (*c) {
-    char ch = *c;
-    // ee_printf("CHAR 0x%x\n",ch );
-
-    // special casees: print screen clears screen, F12 toggles font
-    if (ch == 0xFF) {
-      gfx_term_putstring("\x1b[2J", 0);
-      ch = 0;
-    } else if (ch == 0xFE) {
-      gfx_toggle_font_height();
-      ch = 0;
-    } else if (ch == 0xFD) {
-      rotate_baudrate();
-      ch = 0;
-    }
-
-    if (ch != 0)
-      uart_write(&ch, 1);
-    ++c;
-
+    uart_write(c++, 1);
   }
 }
 
@@ -173,8 +94,6 @@ _heartbeat_timer_handler(__attribute__((unused)) unsigned hnd,
     W32(GPSET0, 1 << 16);
     led_status = 1;
   }
-
-  gfx_term_blink_cursor();
 
   attach_timer_handler(1000 / HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
 }
@@ -288,75 +207,26 @@ initialize_framebuffer()
 
   usleep(10000);
   gfx_set_env(p_fb, v_w, v_h, pitch, fbsize);
-  gfx_clear();
-}
-
-void
-video_line_test()
-{
-  int x = -10;
-  int y = -10;
-  int vx = 1;
-  int vy = 0;
-
-  gfx_set_fg(15);
-
-  while (1) {
-    // Render line
-    gfx_line(320, 240, x, y);
-
-    usleep(1000);
-
-    // Clear line
-    gfx_swap_fg_bg();
-    gfx_line(320, 240, x, y);
-    gfx_swap_fg_bg();
-
-    x = x + vx;
-    y = y + vy;
-
-    if (x > 700) {
-      x--;
-      vx--;
-      vy++;
-    }
-    if (y > 500) {
-      y--;
-      vx--;
-      vy--;
-    }
-    if (x < -10) {
-      x++;
-      vx++;
-      vy--;
-    }
-    if (y < -10) {
-      y++;
-      vx++;
-      vy++;
-    }
-  }
 }
 
 void
 term_main_loop()
 {
   while (1) {
-    if (!DMA_CHAN0_BUSY && uart_buffer_start != uart_buffer_end) {
-      volatile const char* p = uart_buffer_start;
+    if (uart_buffer_start != uart_buffer_end) {
+      const char* p = (const char*) uart_buffer_start;
       uart_buffer_start = uart_buffer_end;
       if (p > uart_buffer_end) {
-        gfx_term_putstring(p, uart_buffer_limit - p);
-        p = uart_buffer;
+        vterm_input_write(vterm, p, uart_buffer_limit - p);
+        p = (const char*) uart_buffer;
       }
       if (uart_buffer_end > p) {
-        gfx_term_putstring(p, uart_buffer_end - p);
+        vterm_input_write(vterm, p, uart_buffer_end - p);
       }
     }
 
     uart_fill_queue(0);
     timer_poll();
-    gfx_term_render_cursor();
   }
 }
 
@@ -370,12 +240,9 @@ entry_point()
   uart_buffer = (volatile char*)nmalloc_malloc(UART_BUFFER_SIZE);
 
   uart_init();
-  add_initial_baudrate();
   heartbeat_init();
 
   initialize_framebuffer();
-
-  gfx_term_putstring("\x1B[2J", 0); // Clear screen
 
   timers_init();
   attach_timer_handler(HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
@@ -383,25 +250,12 @@ entry_point()
   initialize_uart_irq();
 
   if (USPiInitialize()) {
-    // ee_printf("Initialization OK!\n");
-    // ee_printf("Checking for keyboards...\n");
-
     if (USPiKeyboardAvailable()) {
       USPiKeyboardRegisterKeyPressedHandler(_keypress_handler);
-      gfx_set_fg(10);
-      // ee_printf("Keyboard found.\n");
-      gfx_set_fg(7);
-    } else {
-      gfx_set_fg(9);
-      ee_printf("No keyboard found.\n");
-      gfx_set_fg(15);
     }
+  } else {
+    ee_printf("USB initialization failed.\n");
   }
 
-  else
-    ee_printf("USB initialization failed.\n");
-
-  gfx_term_reset_attrib();
-  gfx_set_fg(7);
   term_main_loop();
 }

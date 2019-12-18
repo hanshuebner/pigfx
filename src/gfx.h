@@ -3,64 +3,18 @@
 
 typedef unsigned char GFX_COL;
 
-extern void
-gfx_set_env(void* p_framebuffer,
-            unsigned int width,
-            unsigned int height,
-            unsigned int pitch,
-            unsigned int size);
-extern void gfx_set_bg(GFX_COL col);
-extern void gfx_set_fg(GFX_COL col);
-extern void gfx_swap_fg_bg();
-extern void gfx_get_term_size(unsigned int* rows, unsigned int* cols);
-extern void gfx_set_font_height(unsigned int h);
-extern void gfx_toggle_font_height();
+extern void gfx_set_env(void* p_framebuffer,
+                        unsigned int width,
+                        unsigned int height,
+                        unsigned int pitch,
+                        unsigned int size);
 
-/*!
- * Fills the entire framebuffer with the background color
- */
-extern void gfx_clear();
+extern void gfx_clear(GFX_COL color);
 
-/*!
- * Fills a rectangle with the foreground color
- */
-extern void
-gfx_fill_rect(unsigned int x,
-              unsigned int y,
-              unsigned int width,
-              unsigned int height);
-
-/*!
- * Renders a line from x0-y0 to x1-y1
- */
-extern void
-gfx_line(int x0, int y0, int x1, int y1);
-
-/*!
- * Fills a rectangle with the background color
- */
-extern void
-gfx_clear_rect(unsigned int x,
-               unsigned int y,
-               unsigned int width,
-               unsigned int height);
-
-/*!
- *  Terminal
- *
- */
-extern void gfx_term_putstring(volatile const char* str, unsigned int length);
-extern void gfx_term_set_cursor_visibility(int);
-extern void gfx_term_blink_cursor();
-extern void gfx_term_render_cursor();
-extern void gfx_term_move_cursor(int row, int col);
-extern void gfx_term_save_cursor();
-extern void gfx_term_restore_cursor();
-extern void gfx_term_clear_till_end();
-extern void gfx_term_clear_till_cursor();
-extern void gfx_term_clear_line();
-extern void gfx_term_clear_lines(int from, int to);
-extern void gfx_term_clear_screen();
-extern void gfx_term_reset_attrib();
+extern void gfx_fill_rect(unsigned int x,
+                          unsigned int y,
+                          unsigned int width,
+                          unsigned int height,
+                          GFX_COL color);
 
 #endif

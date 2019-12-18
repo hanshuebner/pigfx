@@ -1,47 +1,22 @@
 #ifndef _PIGFX_UTILS_H_
 #define _PIGFX_UTILS_H_
 
-extern void
-enable_irq();
-extern void
-disable_irq();
+extern void enable_irq();
+extern void disable_irq();
 
-extern void
-busywait(unsigned int cycles);
-extern void
-W32(unsigned int addr, unsigned int data);
-extern unsigned int
-R32(unsigned int addr);
-extern void
-membarrier();
+extern void busywait(unsigned int cycles);
+extern void W32(unsigned int addr, unsigned int data);
+extern unsigned int R32(unsigned int addr);
+extern void membarrier();
 
 /**
  * String related
  */
-extern unsigned int
-hex2byte(unsigned char* addr);
-extern void
-byte2hexstr(unsigned char byte, char* outstr);
-extern void
-word2hexstr(unsigned int word, char* outstr);
-extern unsigned int
-strlen(char* str);
-extern int
-strcmp(char* s1, char* s2);
-
-/**
- * Memory
- */
-/*
-inline void memcpy( unsigned char* dst, unsigned char* src, unsigned int len )
-{
-    unsigned char* srcEnd = src + len;
-    while( src<srcEnd )
-    {
-        *dst++ =  *src++;
-    }
-}
-*/
+extern unsigned int hex2byte(unsigned char* addr);
+extern void byte2hexstr(unsigned char byte, char* outstr);
+extern void word2hexstr(unsigned int word, char* outstr);
+extern unsigned int strlen(char* str);
+extern int strcmp(char* s1, char* s2);
 
 /*
  *   Data memory barrier
@@ -70,11 +45,6 @@ inline void memcpy( unsigned char* dst, unsigned char* src, unsigned int len )
 
 #define mem_p2v(X) (X)
 #define mem_v2p(X) (X)
-//#define mem_2uncached(X) (X)
-//#define mem_2cached(X)   (X)
-
-//#define mem_p2v(X) ((((unsigned int)X)&0x0FFFFFFF)|0x40000000)
-//#define mem_v2p(X) ((((unsigned int)X)&0x0FFFFFFF))
 #define mem_2uncached(X) ((((unsigned int)X) & 0x0FFFFFFF) | 0x40000000)
 #define mem_2cached(X) ((((unsigned int)X) & 0x0FFFFFFF))
 
