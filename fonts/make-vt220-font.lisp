@@ -18,7 +18,7 @@
       (dotimes (i 256)
         (format t "~A~%" i)
         (let* ((i (case i
-                    (0 32)
+                    (0 0)
                     (32 0)
                     (otherwise i)))
                (src-x (+ 1 (* (floor i 16) 10)))
