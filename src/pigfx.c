@@ -31,9 +31,6 @@ volatile char* uart_buffer_start;
 volatile char* uart_buffer_end;
 volatile char* uart_buffer_limit;
 
-VTerm *term;
-VTermScreen *screen;
-
 /* ---------------------------------------------------------------------------------------------------
  */
 
@@ -201,24 +198,14 @@ initialize_framebuffer()
   gfx_set_env(p_fb, v_w, v_h, pitch, fbsize);
 
   // fixme hard coded font size
-  term = vterm_new(p_w / 10, p_h / 20);
-
-  screen = vterm_obtain_screen(term);
-
-  static VTermScreenCallbacks callbacks =
-    {
-     .damage = term_damage,
-     .movecursor = term_movecursor
-    };
-  
-  vterm_screen_set_callbacks(screen, &callbacks, 0);
-  vterm_screen_enable_altscreen(screen, 1);
-  vterm_screen_reset(screen, 1);
+  term_init(p_h / 20, p_w / 10);
 }
 
 void
 term_main_loop()
 {
+  extern VTerm* term;
+
   while (1) {
     if (uart_buffer_start != uart_buffer_end) {
       const char* p = (const char*) uart_buffer_start;

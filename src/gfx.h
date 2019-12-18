@@ -9,6 +9,12 @@ extern void gfx_set_env(void* p_framebuffer,
                         unsigned int pitch,
                         unsigned int size);
 
+extern void gfx_putc(unsigned row,
+                     unsigned column,
+                     unsigned char c,
+                     GFX_COL foreground_color,
+                     GFX_COL background_color);
+
 extern void gfx_clear(GFX_COL color);
 
 extern void gfx_fill_rect(unsigned int x,
