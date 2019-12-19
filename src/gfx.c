@@ -92,6 +92,41 @@ gfx_clear(GFX_COL background_color)
   dma_execute_queue_and_wait();
 }
 
+void
+gfx_save_cursor_content(unsigned int row,
+                        unsigned int column)
+{
+  // Save framebuffer content that is going to be replaced by the cursor
+
+  unsigned char* pb = ctx.cursor_buffer;
+  unsigned char* pfb = PFB(column * ctx.font_width,
+                           row * ctx.font_height);
+
+  for (int y = 0; y < ctx.font_height; y++) {
+    for (int x = 0; x < ctx.font_width; x++) {
+      *pb++ = pfb[x];
+    }
+    pfb += ctx.pitch;
+  }
+}
+
+void
+gfx_restore_cursor_content(unsigned int row,
+                           unsigned int column)
+{
+  // Restore framebuffer content that was overwritten by the cursor
+  unsigned char* pb = ctx.cursor_buffer;
+  unsigned char* pfb = PFB(column * ctx.font_width,
+                           row * ctx.font_height);
+
+  for (int y = 0; y < ctx.font_height; y++) {
+    for (int x = 0; x < ctx.font_width; x++) {
+      pfb[x] = *pb++;
+    }
+    pfb += ctx.pitch;
+  }
+}
+
 static void
 gfx_scroll_up(unsigned int start_line,
               unsigned int end_line,
@@ -169,6 +204,7 @@ gfx_move_rect(unsigned int from_row,
               unsigned int columns,
               GFX_COL background_color)
 {
+  gfx_restore_cursor_content(ctx.cursor_row, ctx.cursor_column);
   unsigned int width = columns * ctx.font_width;
   unsigned int height = rows * ctx.font_height;
   dma_enqueue_operation((unsigned int*)(PFB(from_column * ctx.font_width, from_row * ctx.font_height)),
@@ -177,6 +213,7 @@ gfx_move_rect(unsigned int from_row,
                         ((ctx.pitch - width) & 0xFFFF) << 16 | (ctx.pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
   dma_execute_queue_and_wait();
+  gfx_save_cursor_content(ctx.cursor_row, ctx.cursor_column);
 }
 
 void
@@ -220,41 +257,6 @@ gfx_putc(unsigned row,
       }
     }
     pf += ctx.pitch;
-  }
-}
-
-void
-gfx_restore_cursor_content(unsigned int row,
-                           unsigned int column)
-{
-  // Restore framebuffer content that was overwritten by the cursor
-  unsigned char* pb = ctx.cursor_buffer;
-  unsigned char* pfb = PFB(column * ctx.font_width,
-                           row * ctx.font_height);
-
-  for (int y = 0; y < ctx.font_height; y++) {
-    for (int x = 0; x < ctx.font_width; x++) {
-      pfb[x] = *pb++;
-    }
-    pfb += ctx.pitch;
-  }
-}
-
-void
-gfx_save_cursor_content(unsigned int row,
-                        unsigned int column)
-{
-  // Save framebuffer content that is going to be replaced by the cursor
-
-  unsigned char* pb = ctx.cursor_buffer;
-  unsigned char* pfb = PFB(column * ctx.font_width,
-                           row * ctx.font_height);
-
-  for (int y = 0; y < ctx.font_height; y++) {
-    for (int x = 0; x < ctx.font_width; x++) {
-      *pb++ = pfb[x];
-    }
-    pfb += ctx.pitch;
   }
 }
 
