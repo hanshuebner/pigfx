@@ -16,6 +16,10 @@
 #include "term.h"
 #include "hwutils.h"
 
+#ifndef __unused
+#define __unused __attribute__((unused))
+#endif
+
 using namespace std;
 
 #define GPFSEL1 0x20200004
@@ -87,9 +91,9 @@ _keypress_handler(const char* str)
 }
 
 static void
-_heartbeat_timer_handler(__attribute__((unused)) unsigned hnd,
-                         __attribute__((unused)) void* pParam,
-                         __attribute__((unused)) void* pContext)
+_heartbeat_timer_handler(__unused unsigned hnd,
+                         __unused void* pParam,
+                         __unused void* pContext)
 {
   if (led_status) {
     W32(GPCLR0, 1 << 16);
@@ -103,7 +107,7 @@ _heartbeat_timer_handler(__attribute__((unused)) unsigned hnd,
 }
 
 void
-uart_fill_queue(__attribute__((unused)) void* data)
+uart_fill_queue(__unused void* data)
 {
   while (!(*UART0_FR & 0x10) /*uart_poll()*/) {
     *uart_buffer_end++ = (char)(*UART0_DR & 0xFF /*uart_read_byte()*/);
