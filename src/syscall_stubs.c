@@ -5,8 +5,15 @@
 #undef errno
 extern int errno;
 
+void *const __dso_handle = 0;
+
 void
-_fini(void)
+__sync_synchronize()
+{
+}
+
+void
+_fini()
 {
 }
 
@@ -39,6 +46,13 @@ _sbrk(int incr)
     return space;
   }
 }
+
+int
+_open(__unused const char* pathname, __unused int flags, __unused int mode)
+{
+  errno = ENOSYS;
+  return -1;
+}  
 
 int
 _read(__unused int fd, __unused char* buf, __unused int size)

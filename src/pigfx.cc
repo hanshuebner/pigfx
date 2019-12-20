@@ -1,4 +1,7 @@
 
+#include <string>
+#include <sstream>
+
 #include <uspi.h>
 #include <vterm.h>
 
@@ -12,6 +15,8 @@
 #include "uart.h"
 #include "term.h"
 #include "hwutils.h"
+
+using namespace std;
 
 #define GPFSEL1 0x20200004
 #define GPSET0 0x2020001C
@@ -210,6 +215,12 @@ term_main_loop()
 {
   extern VTerm* term;
 
+  stringstream os;
+  os << "Hello from C++!\r\n";
+
+  string s = os.str();
+  vterm_input_write(term, s.c_str(), s.length());
+
   while (1) {
     if (uart_buffer_start != uart_buffer_end) {
       const char* p = (const char*) uart_buffer_start;
@@ -260,6 +271,6 @@ extern "C" void
 entry_point()
 {
   term_initialize();
-  
+
   term_main_loop();
 }
