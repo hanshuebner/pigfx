@@ -30,6 +30,11 @@ volatile char* uart_buffer_start;
 volatile char* uart_buffer_end;
 volatile char* uart_buffer_limit;
 
+extern "C" void
+LogWrite(const char* pSource, unsigned Severity, const char* fmt, ...)
+{
+}
+
 /* ---------------------------------------------------------------------------------------------------
  */
 
