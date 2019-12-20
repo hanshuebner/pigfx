@@ -4,7 +4,6 @@
 
 #include "console.h"
 #include "dma.h"
-#include "ee_printf.h"
 #include "framebuffer.h"
 #include "gfx.h"
 #include "irq.h"
@@ -186,7 +185,7 @@ initialize_framebuffer()
   unsigned int v_w = p_w;
   unsigned int v_h = p_h;
 
-  fb_init(p_w, p_h, v_w, v_h, 8, (void*)&p_fb, &fbsize, &pitch);
+  fb_init(p_w, p_h, v_w, v_h, 8, (void**)&p_fb, &fbsize, &pitch);
 
   fb_set_xterm_palette();
 
@@ -225,11 +224,11 @@ term_main_loop()
   }
 }
 
+extern "C" void heap_init();
+
 void
 term_initialize()
 {
-  extern void heap_init();
-
   heap_init();
 
   // UART buffer allocation
@@ -249,12 +248,10 @@ term_initialize()
     if (USPiKeyboardAvailable()) {
       USPiKeyboardRegisterKeyPressedHandler(_keypress_handler);
     }
-  } else {
-    ee_printf("USB initialization failed.\n");
   }
 }
 
-void
+extern "C" void
 entry_point()
 {
   term_initialize();

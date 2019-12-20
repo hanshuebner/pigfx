@@ -2,11 +2,11 @@
 ARMGNU ?= arm-none-eabi
 LIBVTERM_CFLAGS = -O0 -g -nostdlib -nostartfiles -fno-stack-limit -ffreestanding -mfloat-abi=soft -Iuspi/include -Ilibvterm/include
 CFLAGS = -Wall -Wextra $(LIBVTERM_CFLAGS)
-
+CXXFLAGS = -std=c++17
 
 ## Important!!! asm.o must be the first object to be linked!
 OOB = 	asm.o pigfx.o uart.o irq.o hwutils.o timer.o framebuffer.o postman.o \
-	console.o gfx.o dma.o uspios_wrapper.o ee_printf.o \
+	console.o gfx.o dma.o uspios_wrapper.o \
 	raspihwconfig.o stupid_timer.o binary_assets.o term.o \
 	syscall_stubs.o
 
@@ -14,10 +14,8 @@ BUILD_DIR = build
 SRC_DIR = src
 BUILD_VERSION = $(shell git describe --all --long | cut -d "-" -f 3)
 
-
 OBJS=$(patsubst %.o,$(BUILD_DIR)/%.o,$(OOB))
 
-LIBGCC=$(shell $(ARMGNU)-gcc -print-libgcc-file-name)
 LIBUSPI=uspi/lib/libuspi.a
 LIBVTERM=$(BUILD_DIR)/libvterm.a
 
@@ -41,13 +39,17 @@ dump: pigfx.elf
 	@$(ARMGNU)-objdump --disassemble-zeroes -D pigfx.elf > pigfx.dump
 	@echo "OBJDUMP $<"
 
-$(BUILD_DIR)/%.o : $(SRC_DIR)/%.c 
+$(BUILD_DIR)/%.o : $(SRC_DIR)/%.c
 	@$(ARMGNU)-gcc $(CFLAGS) -c $< -o $@
 	@echo "CC $<"
 
 $(BUILD_DIR)/%.o : $(SRC_DIR)/%.s 
 	@$(ARMGNU)-as $< -o $@
 	@echo "AS $<"
+
+$(BUILD_DIR)/%.o : $(SRC_DIR)/%.cc 
+	@$(ARMGNU)-c++ $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+	@echo "C++ $<"
 
 $(LIBVTERM): $(patsubst libvterm/src/%.c,$(LIBVTERM)(%.o),$(wildcard libvterm/src/*.c))
 
@@ -69,7 +71,7 @@ $(LIBVTERM)(%.o): libvterm/src/%.c $(patsubst %.tbl,%.inc,$(wildcard libvterm/sr
 	@echo "OBJCOPY $< -> $@"
 
 pigfx.elf : $(SRC_DIR)/pigfx_config.h $(OBJS) $(LIBVTERM) $(LIBUSPI)
-	@$(ARMGNU)-gcc -nostartfiles $(OBJS) $(LIBGCC) $(LIBUSPI) $(LIBVTERM) -T memmap -o $@
+	@$(ARMGNU)-c++ -nostartfiles $(OBJS) $(LIBUSPI) $(LIBVTERM) -T memmap -o $@
 	@echo "LD $@"
 
 install: kernel

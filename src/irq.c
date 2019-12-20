@@ -1,6 +1,5 @@
 #include "irq.h"
 
-#include "ee_printf.h"
 #include "hwutils.h"
 
 rpi_irq_controller_t* pIRQController =

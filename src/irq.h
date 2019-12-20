@@ -1,6 +1,10 @@
 #ifndef _IRQ_H_
 #define _IRQ_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* See
  * http://www.valvers.com/open-software/raspberry-pi/step04-bare-metal-programming-in-c-pt4/
  */
@@ -49,5 +53,9 @@ typedef void
 IntHandler(void* data);
 void
 irq_attach_handler(unsigned int irq, IntHandler* phandler, void* pdata);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif

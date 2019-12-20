@@ -1,6 +1,10 @@
 #ifndef _PIGFX_HWUTILS_H_
 #define _PIGFX_HWUTILS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void enable_irq();
 extern void disable_irq();
 
@@ -47,5 +51,9 @@ extern int strcmp(char* s1, char* s2);
 #define mem_v2p(X) (X)
 #define mem_2uncached(X) ((((unsigned int)X) & 0x0FFFFFFF) | 0x40000000)
 #define mem_2cached(X) ((((unsigned int)X) & 0x0FFFFFFF))
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif

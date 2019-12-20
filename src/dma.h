@@ -1,6 +1,10 @@
 #ifndef _DMA_H_
 #define _DMA_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define DMA_TI_SRC_INC (1 << 8)
 #define DMA_TI_SRC_IGNORE (1 << 11)
 #define DMA_TI_SRC_WIDTH_128BIT (1 << 9)
@@ -29,5 +33,9 @@ dma_running();
   (*((volatile unsigned int*)0x20007000 /*DMA_BASE*/ + (0 << 6) +              \
      0x00 /*dma_cs_offset*/) &                                                 \
    0x1)
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif

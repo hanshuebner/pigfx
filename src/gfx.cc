@@ -56,7 +56,7 @@ gfx_set_env(void* p_framebuffer,
 {
   dma_init();
 
-  ctx.full_pfb = p_framebuffer;
+  ctx.full_pfb = (unsigned char*) p_framebuffer;
   ctx.full_height = height;
   ctx.full_size = size;
   ctx.width = width;

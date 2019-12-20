@@ -11,12 +11,10 @@ term_init(unsigned int rows, unsigned int columns)
 
   screen = vterm_obtain_screen(term);
 
-  static VTermScreenCallbacks callbacks =
-    {
-     .damage = term_damage,
-     .movecursor = term_movecursor,
-     .moverect = term_moverect
-    };
+  static VTermScreenCallbacks callbacks;
+  callbacks.damage = term_damage;
+  callbacks.movecursor = term_movecursor;
+  callbacks.moverect = term_moverect;
 
   vterm_screen_set_callbacks(screen, &callbacks, 0);
   vterm_screen_enable_altscreen(screen, 1);

@@ -1,6 +1,10 @@
 #ifndef _FRAMEBUFFER_H_
 #define _FRAMEBUFFER_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum
   {
    FB_SUCCESS = 0x0,
@@ -32,5 +36,9 @@ extern FB_RETURN_TYPE fb_set_phisical_buffer_size(unsigned int* pWidth, unsigned
 extern FB_RETURN_TYPE fb_set_virtual_offset(unsigned int pX, unsigned int pY);
 extern FB_RETURN_TYPE fb_set_virtual_buffer_size(unsigned int* pWidth, unsigned int* pHeight);
 extern FB_RETURN_TYPE fb_allocate_buffer(void** ppBuffer, unsigned int* pBufferSize);
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif

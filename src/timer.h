@@ -1,6 +1,10 @@
 #ifndef _PIGFX_TIMER_H_
 #define _PIGFX_TIMER_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern void usleep(unsigned int usec);
 extern unsigned int time_microsec();
 
@@ -13,5 +17,9 @@ extern unsigned attach_timer_handler(unsigned millis,
                                      void* pContext);
 extern void detach_timer_handler(unsigned hnd);
 extern void timer_poll();
+
+#ifdef __cplusplus
+};
+#endif
 
 #endif

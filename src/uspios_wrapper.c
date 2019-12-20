@@ -1,9 +1,12 @@
 #include "../uspi/include/uspios.h"
-#include "ee_printf.h"
 #include "irq.h"
 #include "raspihwconfig.h"
 #include "timer.h"
 #include "uart.h"
+
+#ifndef __unused
+#define __unused __attribute__((unused))
+#endif
 
 void
 MsDelay(unsigned nMilliSeconds)
@@ -30,14 +33,12 @@ StartKernelTimer(
 void
 CancelKernelTimer(unsigned hTimer)
 {
-  // ee_printf("* CancelKernelTimer *\n");
   detach_timer_handler(hTimer);
 }
 
 void
 ConnectInterrupt(unsigned nIRQ, TInterruptHandler* pHandler, void* pParam)
 {
-  // ee_printf("* ConnectInterrupt * IRQ: %d \n", nIRQ);
   irq_attach_handler(nIRQ, pHandler, pParam);
 }
 
@@ -56,8 +57,6 @@ SetPowerStateOn(
 int
 GetMACAddress(unsigned char Buffer[6]) // "get board MAC address"
 {
-  // ee_printf("* GetMacAddress *\n");
-
   if (RHW_SUCCESS != rhw_get_mac_address(Buffer))
     return 0;
 
@@ -65,10 +64,8 @@ GetMACAddress(unsigned char Buffer[6]) // "get board MAC address"
 }
 
 void
-uspi_assertion_failed(const char* pExpr, const char* pFile, unsigned nLine)
+uspi_assertion_failed(__unused const char* pExpr, __unused const char* pFile, __unused unsigned nLine)
 {
-  ee_printf("ASSERTION FAILED: %s, in %s (Line %d)\n", pExpr, pFile, nLine);
-
   while (1)
     usleep(1000000);
 }
@@ -76,9 +73,8 @@ uspi_assertion_failed(const char* pExpr, const char* pFile, unsigned nLine)
 void
 DebugHexdump(const void* pBuffer,
              unsigned nBufLen,
-             const char* pSource /* = 0 */)
+             __unused const char* pSource /* = 0 */)
 {
-  ee_printf("Memory dump of %s:\n", pSource);
   uart_dump_mem((unsigned char*)pBuffer, (unsigned char*)(pBuffer) + nBufLen);
 }
 
