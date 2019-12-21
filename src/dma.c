@@ -37,8 +37,9 @@ dma_enqueue_operation(unsigned int* src,
                       unsigned int stride,
                       unsigned int TRANSFER_INFO)
 {
-  if (curr_blk == DMA_BLOCK_COUNT)
-    return 0;
+  if (curr_blk == DMA_BLOCK_COUNT) {
+    dma_execute_queue();
+  }
 
   DMA_Control_Block* blk =
     (DMA_Control_Block*)mem_2uncached(&(ctr_blocks[curr_blk]));
