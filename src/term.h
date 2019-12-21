@@ -1,11 +1,29 @@
-#ifndef _term_h
-#define _term_h
+#pragma once
+
+#include <memory>
 
 #include <vterm.h>
 
-void term_init(unsigned int rows, unsigned int columns);
-int term_damage(VTermRect rect, void* user);
-int term_movecursor(VTermPos position, VTermPos oldPosition, int visible, void* user);
-int term_moverect(VTermRect dest, VTermRect src, void *user);
+#include "gfx.h"
 
-#endif
+using namespace std;
+
+class Terminal
+{
+ public:
+  Terminal(shared_ptr<Framebuffer> framebuffer);
+
+  void output(const char* const string, unsigned int length);
+
+  int damage(VTermRect rect);
+  int movecursor(VTermPos position, __unused VTermPos oldPosition, int visible);
+  int moverect(VTermRect dest, VTermRect src);
+
+ private:
+  shared_ptr<Framebuffer> _framebuffer;
+
+  VTerm* _term;
+  VTermScreen* _screen;
+  VTermScreenCallbacks _callbacks;
+};
+

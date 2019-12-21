@@ -2,7 +2,7 @@
 ARMGNU ?= arm-none-eabi
 LIBVTERM_CFLAGS = -O0 -g -nostdlib -nostartfiles -fno-stack-limit -ffreestanding -mfloat-abi=soft -Iuspi/include -Ilibvterm/include
 CFLAGS = -Wall -Wextra $(LIBVTERM_CFLAGS)
-CXXFLAGS = -std=c++17
+CXXFLAGS = -std=c++17 -Ilru-cache/include
 
 ## Important!!! asm.o must be the first object to be linked!
 OOB = 	asm.o pigfx.o uart.o irq.o hwutils.o timer.o framebuffer.o postman.o \

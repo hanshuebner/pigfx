@@ -57,54 +57,6 @@ membarrier:
     bx lr
 
 
-;@ strlen
-.global strlen
-strlen:
-    push {r1,r2}
-    mov r1, r0 
-    mov r0, #0
-1:
-    ldrb r2, [r1]
-    cmp r2,#0
-    beq 2f
-    add r0, #1
-    add r1, #1
-    b 1b
-2:
-    pop {r1,r2}
-    bx lr
-
-
-;@ strcmp
-;@  r0: string 1 address
-;@  r1: string 2 address
-;@  output (r0):
-;@  0 if the two strings are equal
-;@    a negative number if s1<s2
-;@    a positive number otherwise
-.global strcmp
-strcmp:
-    push {r2,r3}
-
-1:
-    ldrb r2, [r0]
-    ldrb r3, [r1]  
-    add r0,r0,#1
-    add r1,r1,#1
-
-    cmp r2, #0
-    beq 1f
-    cmp r3, #0
-    beq 1f
-    
-    cmp r2, r3
-    beq 1b
-1:
-    sub r0, r2, r3
-    pop {r2,r3}
-    bx lr
-
-
 ;@ byte2hexstr
 ;@  r0: input byte
 ;@  r1: output address (2bytes needed)

@@ -2,6 +2,8 @@
 #include <sys/types.h>
 #include <sys/errno.h>
 
+#include "hwutils.h"
+
 #undef errno
 extern int errno;
 
@@ -10,6 +12,7 @@ void *const __dso_handle = 0;
 void
 __sync_synchronize()
 {
+  membarrier();
 }
 
 void

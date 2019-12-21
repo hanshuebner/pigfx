@@ -1,44 +1,27 @@
 
-#include <stdio.h>
+#include <cstring>
+#include <algorithm>
+#include <memory>
+#include <map>
 
 #include "gfx.h"
 #include "dma.h"
 #include "hwutils.h"
 #include "timer.h"
 
+using namespace std;
+
 extern unsigned char G_FONT_GLYPHS;
 
-#define MIN(v1, v2) (((v1) < (v2)) ? (v1) : (v2))
-#define PFB(X, Y) (ctx.pfb + Y * ctx.pitch + X)
+using dma_buffer = unsigned int __attribute__((aligned(0x100)))[16];
 
-typedef struct
-{
-  unsigned int width;
-  unsigned int height;
-  unsigned int pitch;
-  unsigned int size;
-  unsigned char* pfb;
+dma_buffer mem_buff_dma;
 
-  unsigned char* full_pfb;
-  unsigned int full_size;
-  unsigned int full_height;
-
-  int font_height;
-  int font_width;
-  unsigned char* font_data;
-
-  unsigned int cursor_row;
-  unsigned int cursor_column;
-  unsigned int cursor_color;
-  unsigned char cursor_buffer[10 * 20];
-} FRAMEBUFFER_CTX;
-
-static FRAMEBUFFER_CTX ctx;
-unsigned int __attribute__((aligned(0x100))) mem_buff_dma[16];
+const unsigned GLYPH_CACHE_SIZE = 1024;
 
 #define MKCOL32(c) ((c) << 24 | (c) << 16 | (c) << 8 | (c))
 
-void
+static void
 dma_execute_queue_and_wait()
 {
   dma_execute_queue();
@@ -47,39 +30,37 @@ dma_execute_queue_and_wait()
     ; // Busy wait for DMA to finish
 }
 
-void
-gfx_set_env(void* p_framebuffer,
-            unsigned int width,
-            unsigned int height,
-            unsigned int pitch,
-            unsigned int size)
+Framebuffer::Framebuffer(unsigned char* p_framebuffer,
+                         unsigned int width,
+                         unsigned int height,
+                         unsigned int pitch,
+                         unsigned int size)
+  :  _width(width),
+     _pitch(pitch),
+     _full_pfb(p_framebuffer),
+     _full_size(size),
+     _full_height(height),
+     _font_height(20),
+     _font_width(10),
+     _font_data(&G_FONT_GLYPHS),
+     _cursor_row(0),
+     _cursor_column(0),
+     _cursor_color(9),
+     _cursor_blink_state(0),
+     _glyph_cache(GLYPH_CACHE_SIZE)
 {
   dma_init();
 
-  ctx.full_pfb = (unsigned char*) p_framebuffer;
-  ctx.full_height = height;
-  ctx.full_size = size;
-  ctx.width = width;
-  ctx.pitch = pitch;
+  unsigned int lines = _full_height / _font_height;
+  unsigned border_top_bottom = (_full_height - (lines * _font_height)) / 2;
 
-  ctx.font_height = 20;
-  ctx.font_width = 10;
-  ctx.font_data = &G_FONT_GLYPHS;
-
-  unsigned int lines = ctx.full_height / ctx.font_height;
-  unsigned border_top_bottom = (ctx.full_height - (lines * ctx.font_height)) / 2;
-
-  ctx.pfb = ctx.full_pfb + (border_top_bottom * ctx.pitch);
-  ctx.height = ctx.full_height - (border_top_bottom * 2);
-  ctx.size = ctx.full_size - (border_top_bottom * 2 * ctx.pitch);
-
-  ctx.cursor_row = 0;
-  ctx.cursor_column = 0;
-  ctx.cursor_color = 9;
+  _pfb = _full_pfb + (border_top_bottom * _pitch);
+  _height = _full_height - (border_top_bottom * 2);
+  _size = _full_size - (border_top_bottom * 2 * _pitch);
 }
 
 void
-gfx_clear(GFX_COL background_color)
+Framebuffer::clear(GFX_COL background_color)
 {
   unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
   *BG = MKCOL32(background_color);
@@ -87,55 +68,55 @@ gfx_clear(GFX_COL background_color)
   *(BG + 2) = *BG;
   *(BG + 3) = *BG;
 
-  dma_enqueue_operation(BG, (unsigned int*)(ctx.pfb), ctx.size, 0, DMA_TI_DEST_INC);
+  dma_enqueue_operation(BG, (unsigned int*)(_pfb), _size, 0, DMA_TI_DEST_INC);
 
   dma_execute_queue_and_wait();
 }
 
 void
-gfx_save_cursor_content(unsigned int row,
-                        unsigned int column)
+Framebuffer::save_cursor_content(unsigned int row,
+                                 unsigned int column)
 {
   // Save framebuffer content that is going to be replaced by the cursor
 
-  unsigned char* pb = ctx.cursor_buffer;
-  unsigned char* pfb = PFB(column * ctx.font_width,
-                           row * ctx.font_height);
+  unsigned char* pb = _cursor_buffer;
+  unsigned char* pfb = fb_pointer(column * _font_width,
+                                  row * _font_height);
 
-  for (int y = 0; y < ctx.font_height; y++) {
-    for (int x = 0; x < ctx.font_width; x++) {
+  for (int y = 0; y < _font_height; y++) {
+    for (int x = 0; x < _font_width; x++) {
       *pb++ = pfb[x];
     }
-    pfb += ctx.pitch;
+    pfb += _pitch;
   }
 }
 
 void
-gfx_restore_cursor_content(unsigned int row,
-                           unsigned int column)
+Framebuffer::restore_cursor_content(unsigned int row,
+                                    unsigned int column)
 {
   // Restore framebuffer content that was overwritten by the cursor
-  unsigned char* pb = ctx.cursor_buffer;
-  unsigned char* pfb = PFB(column * ctx.font_width,
-                           row * ctx.font_height);
+  unsigned char* pb = _cursor_buffer;
+  unsigned char* pfb = fb_pointer(column * _font_width,
+                                  row * _font_height);
 
-  for (int y = 0; y < ctx.font_height; y++) {
-    for (int x = 0; x < ctx.font_width; x++) {
+  for (int y = 0; y < _font_height; y++) {
+    for (int x = 0; x < _font_width; x++) {
       pfb[x] = *pb++;
     }
-    pfb += ctx.pitch;
+    pfb += _pitch;
   }
 }
 
-static void
-gfx_scroll_up(unsigned int start_line,
-              unsigned int end_line,
-              unsigned int lines,
-              GFX_COL background_color)
+void
+Framebuffer::scroll_up(unsigned int start_line,
+                       unsigned int end_line,
+                       unsigned int lines,
+                       GFX_COL background_color)
 {
-  unsigned int pixels_per_line = ctx.font_height * ctx.pitch;
-  unsigned char* from = ctx.pfb + (lines + start_line) * pixels_per_line;
-  unsigned char* to = ctx.pfb + start_line * pixels_per_line;
+  unsigned int pixels_per_line = _font_height * _pitch;
+  unsigned char* from = _pfb + (lines + start_line) * pixels_per_line;
+  unsigned char* to = _pfb + start_line * pixels_per_line;
   unsigned int length = (end_line - start_line - lines + 1) * pixels_per_line;
 
   if (length) {
@@ -146,33 +127,33 @@ gfx_scroll_up(unsigned int start_line,
                           DMA_TI_SRC_INC | DMA_TI_DEST_INC);
   }
   {
-      unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
-      BG[0] = MKCOL32(background_color);
-      BG[1] = BG[0];
-      BG[2] = BG[0];
-      BG[3] = BG[0];
+    unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
+    BG[0] = MKCOL32(background_color);
+    BG[1] = BG[0];
+    BG[2] = BG[0];
+    BG[3] = BG[0];
 
-      dma_enqueue_operation(BG,
-                            (unsigned int*)(ctx.pfb + (end_line - lines + 1) * pixels_per_line),
-                            lines * pixels_per_line,
-                            0,
-                            DMA_TI_DEST_INC);
+    dma_enqueue_operation(BG,
+                          (unsigned int*)(_pfb + (end_line - lines + 1) * pixels_per_line),
+                          lines * pixels_per_line,
+                          0,
+                          DMA_TI_DEST_INC);
   }
 
   dma_execute_queue_and_wait();
 }
 
-static void
-gfx_scroll_down(unsigned int start_line,
-                unsigned int end_line,
-                unsigned int lines,
-                GFX_COL background_color)
+void
+Framebuffer::scroll_down(unsigned int start_line,
+                         unsigned int end_line,
+                         unsigned int lines,
+                         GFX_COL background_color)
 {
-  unsigned int pixels_per_line = ctx.font_height * ctx.pitch;
-  lines = MIN(lines, end_line - start_line);
+  unsigned int pixels_per_line = _font_height * _pitch;
+  lines = min(lines, end_line - start_line);
   for (unsigned int line_to_move = end_line - lines; line_to_move >= start_line; line_to_move--) {
-    unsigned char* from = ctx.pfb + line_to_move * pixels_per_line;
-    unsigned char* to = ctx.pfb + (line_to_move + lines) * pixels_per_line;
+    unsigned char* from = _pfb + line_to_move * pixels_per_line;
+    unsigned char* to = _pfb + (line_to_move + lines) * pixels_per_line;
     dma_enqueue_operation((unsigned int*) from,
                           (unsigned int*) to,
                           pixels_per_line,
@@ -180,48 +161,48 @@ gfx_scroll_down(unsigned int start_line,
                           DMA_TI_SRC_INC | DMA_TI_DEST_INC);
   }
   {
-      unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
-      BG[0] = MKCOL32(background_color);
-      BG[1] = BG[0];
-      BG[2] = BG[0];
-      BG[3] = BG[0];
+    unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
+    BG[0] = MKCOL32(background_color);
+    BG[1] = BG[0];
+    BG[2] = BG[0];
+    BG[3] = BG[0];
 
-      dma_enqueue_operation(BG,
-                            (unsigned int*)(ctx.pfb + start_line * pixels_per_line),
-                            lines * pixels_per_line,
-                            0,
-                            DMA_TI_DEST_INC);
+    dma_enqueue_operation(BG,
+                          (unsigned int*)(_pfb + start_line * pixels_per_line),
+                          lines * pixels_per_line,
+                          0,
+                          DMA_TI_DEST_INC);
   }
   dma_execute_queue_and_wait();
 }
 
 void
-gfx_move_rect(unsigned int from_row,
-              unsigned int from_column,
-              unsigned int to_row,
-              unsigned int to_column,
-              unsigned int rows,
-              unsigned int columns,
-              GFX_COL background_color)
+Framebuffer::move_rect(unsigned int from_row,
+                       unsigned int from_column,
+                       unsigned int to_row,
+                       unsigned int to_column,
+                       unsigned int rows,
+                       unsigned int columns,
+                       __unused GFX_COL background_color)
 {
-  gfx_restore_cursor_content(ctx.cursor_row, ctx.cursor_column);
-  unsigned int width = columns * ctx.font_width;
-  unsigned int height = rows * ctx.font_height;
-  dma_enqueue_operation((unsigned int*)(PFB(from_column * ctx.font_width, from_row * ctx.font_height)),
-                        (unsigned int*)(PFB(to_column * ctx.font_width, to_row * ctx.font_height)),
+  restore_cursor_content(_cursor_row, _cursor_column);
+  unsigned int width = columns * _font_width;
+  unsigned int height = rows * _font_height;
+  dma_enqueue_operation((unsigned int*)(fb_pointer(from_column * _font_width, from_row * _font_height)),
+                        (unsigned int*)(fb_pointer(to_column * _font_width, to_row * _font_height)),
                         ((height & 0xFFFF) << 16) | (width & 0xFFFF),
-                        ((ctx.pitch - width) & 0xFFFF) << 16 | (ctx.pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
+                        ((_pitch - width) & 0xFFFF) << 16 | (_pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
   dma_execute_queue_and_wait();
-  gfx_save_cursor_content(ctx.cursor_row, ctx.cursor_column);
+  save_cursor_content(_cursor_row, _cursor_column);
 }
 
 void
-gfx_fill_rect(unsigned int x,
-              unsigned int y,
-              unsigned int width,
-              unsigned int height,
-              GFX_COL color)
+Framebuffer::fill_rect(unsigned int x,
+                       unsigned int y,
+                       unsigned int width,
+                       unsigned int height,
+                       GFX_COL color)
 {
   unsigned int* FG = (unsigned int*)mem_2uncached(mem_buff_dma) + 4;
   *FG = MKCOL32(color);
@@ -230,69 +211,96 @@ gfx_fill_rect(unsigned int x,
   *(FG + 3) = *FG;
 
   dma_enqueue_operation(FG,
-                        (unsigned int*)(PFB(x, y)),
+                        (unsigned int*)(fb_pointer(x, y)),
                         (((height - 1) & 0xFFFF) << 16) | (width & 0xFFFF),
-                        ((ctx.pitch - width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
+                        ((_pitch - width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_DEST_INC | DMA_TI_2DMODE);
   dma_execute_queue_and_wait();
 }
 
-void
-gfx_putc(unsigned row,
-         unsigned column,
-         unsigned char c,
-         GFX_COL foreground_color,
-         GFX_COL background_color)
+shared_ptr<Framebuffer::Glyph>
+Framebuffer::make_glyph(const Framebuffer::GlyphKey key)
 {
-  unsigned char* p_glyph = (unsigned char*)(ctx.font_data + (c * ctx.font_width * ctx.font_height));
-  unsigned char* pf = PFB((column * ctx.font_width),
-                          (row * ctx.font_height));
-  unsigned char* pb = (row == ctx.cursor_row && column == ctx.cursor_column) ? ctx.cursor_buffer : 0;
-
-  for (int y = 0; y < ctx.font_height; y++) {
-    for (int x = 0; x < ctx.font_width; x++) {
-      pf[x] = *p_glyph++ ? foreground_color : background_color;
-      if (pb) {
-        *pb++ =  pf[x];
-      }
-    }
-    pf += ctx.pitch;
+  unsigned char* p_glyph = (unsigned char*)(_font_data + (get<0>(key) * _font_width * _font_height));
+  auto glyph = make_shared<Glyph>(_font_width * _font_height);
+  unsigned char* p = glyph->_data;
+  for (int i = 0; i < _font_height * _font_width; i++) {
+    *p++ = *p_glyph++ ? get<1>(key) : get<2>(key);
   }
+  return glyph;
+}
+
+shared_ptr<Framebuffer::Glyph>
+Framebuffer::get_glyph(unsigned char c,
+                       GFX_COL foreground_color,
+                       GFX_COL background_color)
+{
+  shared_ptr<Glyph> glyph;
+  const auto key = GlyphKey(c, foreground_color, background_color);
+  if (_glyph_cache.contains(key)) {
+    glyph = _glyph_cache.lookup(key);
+  } else {
+    glyph = make_glyph(key);
+    _glyph_cache.emplace(key, glyph);
+  }
+
+  return glyph;
 }
 
 void
-gfx_set_cursor(unsigned int row,
-               unsigned int column,
-               __unused unsigned int visible)
+Framebuffer::putc(unsigned row,
+                  unsigned column,
+                  unsigned char c,
+                  GFX_COL foreground_color,
+                  GFX_COL background_color)
 {
-  gfx_restore_cursor_content(ctx.cursor_row, ctx.cursor_column);
-  ctx.cursor_row = row;
-  ctx.cursor_column = column;
-  gfx_save_cursor_content(row, column);
+  unsigned char* p_glyph = get_glyph(c, foreground_color, background_color)->_data;
+
+  if (row == _cursor_row && column == _cursor_column) {
+    memcpy(_cursor_buffer, p_glyph, _font_width * _font_height);
+  }
+
+  dma_enqueue_operation((unsigned int*)p_glyph,
+                        (unsigned int*)(fb_pointer(column * _font_width, row * _font_height)),
+                        ((_font_height & 0xFFFF) << 16) | (_font_width & 0xFFFF),
+                        ((_pitch - _font_width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
+                        DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
+
+  dma_execute_queue_and_wait();
 }
 
 void
-gfx_handle_cursor()
+Framebuffer::set_cursor(unsigned int row,
+                        unsigned int column,
+                        __unused unsigned int visible)
 {
-  static int old_cursor_blink_state;
+  restore_cursor_content(_cursor_row, _cursor_column);
+  _cursor_row = row;
+  _cursor_column = column;
+  save_cursor_content(row, column);
+}
+
+void
+Framebuffer::handle_cursor()
+{
   int cursor_blink_state = (time_microsec() % 800000) > 400000;
 
-  if (old_cursor_blink_state != cursor_blink_state) {
-    unsigned char* pb = ctx.cursor_buffer;
-    unsigned char* pfb = PFB(ctx.cursor_column * ctx.font_width,
-                             ctx.cursor_row * ctx.font_height);
+  if (_cursor_blink_state != cursor_blink_state) {
+    unsigned char* pb = _cursor_buffer;
+    unsigned char* pfb = fb_pointer(_cursor_column * _font_width,
+                                    _cursor_row * _font_height);
 
-    for (int y = 0; y < ctx.font_height; y++) {
-      for (int x = 0; x < ctx.font_width; x++) {
+    for (int y = 0; y < _font_height; y++) {
+      for (int x = 0; x < _font_width; x++) {
         if (cursor_blink_state) {
-          pfb[x] = ctx.cursor_color;
+          pfb[x] = _cursor_color;
         } else {
           pfb[x] = *pb++;
         }
       }
-      pfb += ctx.pitch;
+      pfb += _pitch;
     }
 
-    old_cursor_blink_state = cursor_blink_state;
+    _cursor_blink_state = cursor_blink_state;
   }
 }

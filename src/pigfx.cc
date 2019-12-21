@@ -1,6 +1,7 @@
 
 #include <string>
 #include <sstream>
+#include <memory>
 
 #include <uspi.h>
 #include <vterm.h>
@@ -40,7 +41,7 @@ volatile char* uart_buffer_end;
 volatile char* uart_buffer_limit;
 
 extern "C" void
-LogWrite(const char* pSource, unsigned Severity, const char* fmt, ...)
+LogWrite(__unused const char* pSource, __unused unsigned Severity, __unused const char* fmt, ...)
 {
 }
 
@@ -184,7 +185,7 @@ heartbeat_loop()
   }
 }
 
-void
+shared_ptr<Framebuffer>
 initialize_framebuffer()
 {
   usleep(10000);
@@ -208,46 +209,13 @@ initialize_framebuffer()
 
   usleep(10000);
 
-  gfx_set_env(p_fb, v_w, v_h, pitch, fbsize);
-
-  // fixme hard coded font size
-  term_init(p_h / 20, p_w / 10);
-}
-
-void
-term_main_loop()
-{
-  extern VTerm* term;
-
-  stringstream os;
-  os << "Hello from C++!\r\n";
-
-  string s = os.str();
-  vterm_input_write(term, s.c_str(), s.length());
-
-  while (1) {
-    if (uart_buffer_start != uart_buffer_end) {
-      const char* p = (const char*) uart_buffer_start;
-      uart_buffer_start = uart_buffer_end;
-      if (p > uart_buffer_end) {
-        vterm_input_write(term, p, uart_buffer_limit - p);
-        p = (const char*) uart_buffer;
-      }
-      if (uart_buffer_end > p) {
-        vterm_input_write(term, p, uart_buffer_end - p);
-      }
-    }
-
-    uart_fill_queue(0);
-    timer_poll();
-    gfx_handle_cursor();
-  }
+  return make_shared<Framebuffer>(p_fb, v_w, v_h, pitch, fbsize);
 }
 
 extern "C" void heap_init();
 
 void
-term_initialize()
+initialize_hardware()
 {
   heap_init();
 
@@ -256,8 +224,6 @@ term_initialize()
 
   uart_init();
   heartbeat_init();
-
-  initialize_framebuffer();
 
   timers_init();
   attach_timer_handler(HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
@@ -274,7 +240,32 @@ term_initialize()
 extern "C" void
 entry_point()
 {
-  term_initialize();
+  initialize_hardware();
 
-  term_main_loop();
+  auto framebuffer = initialize_framebuffer();
+  auto terminal = make_shared<Terminal>(framebuffer);
+
+  stringstream os;
+  os << "Hello from C++!\r\n";
+
+  string s = os.str();
+  terminal->output(s.c_str(), s.length());
+
+  while (1) {
+    if (uart_buffer_start != uart_buffer_end) {
+      const char* p = (const char*) uart_buffer_start;
+      uart_buffer_start = uart_buffer_end;
+      if (p > uart_buffer_end) {
+        terminal->output(p, uart_buffer_limit - p);
+        p = (const char*) uart_buffer;
+      }
+      if (uart_buffer_end > p) {
+        terminal->output(p, uart_buffer_end - p);
+      }
+    }
+
+    uart_fill_queue(0);
+    timer_poll();
+    framebuffer->handle_cursor();
+  }
 }
