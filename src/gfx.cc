@@ -187,7 +187,7 @@ Framebuffer::move_rect(unsigned int from_row,
   unsigned int height = rows * _font_height;
   dma_enqueue_operation(fb_pointer(from_column * _font_width, from_row * _font_height),
                         fb_pointer(to_column * _font_width, to_row * _font_height),
-                        ((height & 0xFFFF) << 16) | (width & 0xFFFF),
+                        (((height - 1) & 0xFFFF) << 16) | (width & 0xFFFF),
                         ((_pitch - width) & 0xFFFF) << 16 | (_pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
   flush();
