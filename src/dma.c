@@ -31,8 +31,8 @@ dma_init()
 }
 
 int
-dma_enqueue_operation(unsigned int* src,
-                      unsigned int* dst,
+dma_enqueue_operation(unsigned char* src,
+                      unsigned char* dst,
                       unsigned int len,
                       unsigned int stride,
                       unsigned int TRANSFER_INFO)
@@ -88,7 +88,7 @@ dma_running()
 }
 
 void
-dma_memcpy_32(unsigned int* src, unsigned int* dst, unsigned int size)
+dma_memcpy_32(unsigned char* src, unsigned char* dst, unsigned int size)
 {
   dma_enqueue_operation(src, dst, size, 0, DMA_TI_SRC_INC | DMA_TI_DEST_INC);
   dma_execute_queue();

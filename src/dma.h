@@ -14,20 +14,15 @@ extern "C" {
 #define DMA_TI_2DMODE (1 << 1)
 #define DMA_TI_INTEN (1 << 0)
 
-void
-dma_init();
-int
-dma_enqueue_operation(unsigned int* src,
-                      unsigned int* dst,
-                      unsigned int len,
-                      unsigned int stride,
-                      unsigned int TRANSFER_INFO);
-void
-dma_execute_queue();
-void
-dma_memcpy_32(unsigned int* src, unsigned int* dst, unsigned int size);
-int
-dma_running();
+void dma_init();
+int dma_enqueue_operation(unsigned char* src,
+                          unsigned char* dst,
+                          unsigned int len,
+                          unsigned int stride,
+                          unsigned int TRANSFER_INFO);
+void dma_execute_queue();
+void dma_memcpy_32(unsigned char* src, unsigned char* dst, unsigned int size);
+int dma_running();
 
 #define DMA_CHAN0_BUSY                                                         \
   (*((volatile unsigned int*)0x20007000 /*DMA_BASE*/ + (0 << 6) +              \

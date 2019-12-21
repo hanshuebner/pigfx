@@ -68,7 +68,7 @@ Framebuffer::clear(GFX_COL background_color)
   *(BG + 2) = *BG;
   *(BG + 3) = *BG;
 
-  dma_enqueue_operation(BG, (unsigned int*)(_pfb), _size, 0, DMA_TI_DEST_INC);
+  dma_enqueue_operation((unsigned char*) BG, _pfb, _size, 0, DMA_TI_DEST_INC);
 
   flush();
 }
@@ -120,8 +120,8 @@ Framebuffer::scroll_up(unsigned int start_line,
   unsigned int length = (end_line - start_line - lines + 1) * pixels_per_line;
 
   if (length) {
-    dma_enqueue_operation((unsigned int*) from,
-                          (unsigned int*) to,
+    dma_enqueue_operation(from,
+                          to,
                           length,
                           0,
                           DMA_TI_SRC_INC | DMA_TI_DEST_INC);
@@ -133,8 +133,8 @@ Framebuffer::scroll_up(unsigned int start_line,
     BG[2] = BG[0];
     BG[3] = BG[0];
 
-    dma_enqueue_operation(BG,
-                          (unsigned int*)(_pfb + (end_line - lines + 1) * pixels_per_line),
+    dma_enqueue_operation((unsigned char*) BG,
+                          _pfb + (end_line - lines + 1) * pixels_per_line,
                           lines * pixels_per_line,
                           0,
                           DMA_TI_DEST_INC);
@@ -154,8 +154,8 @@ Framebuffer::scroll_down(unsigned int start_line,
   for (unsigned int line_to_move = end_line - lines; line_to_move >= start_line; line_to_move--) {
     unsigned char* from = _pfb + line_to_move * pixels_per_line;
     unsigned char* to = _pfb + (line_to_move + lines) * pixels_per_line;
-    dma_enqueue_operation((unsigned int*) from,
-                          (unsigned int*) to,
+    dma_enqueue_operation(from,
+                          to,
                           pixels_per_line,
                           0,
                           DMA_TI_SRC_INC | DMA_TI_DEST_INC);
@@ -167,8 +167,8 @@ Framebuffer::scroll_down(unsigned int start_line,
     BG[2] = BG[0];
     BG[3] = BG[0];
 
-    dma_enqueue_operation(BG,
-                          (unsigned int*)(_pfb + start_line * pixels_per_line),
+    dma_enqueue_operation((unsigned char*) BG,
+                          _pfb + start_line * pixels_per_line,
                           lines * pixels_per_line,
                           0,
                           DMA_TI_DEST_INC);
@@ -188,8 +188,8 @@ Framebuffer::move_rect(unsigned int from_row,
   restore_cursor_content(_cursor_row, _cursor_column);
   unsigned int width = columns * _font_width;
   unsigned int height = rows * _font_height;
-  dma_enqueue_operation((unsigned int*)(fb_pointer(from_column * _font_width, from_row * _font_height)),
-                        (unsigned int*)(fb_pointer(to_column * _font_width, to_row * _font_height)),
+  dma_enqueue_operation(fb_pointer(from_column * _font_width, from_row * _font_height),
+                        fb_pointer(to_column * _font_width, to_row * _font_height),
                         ((height & 0xFFFF) << 16) | (width & 0xFFFF),
                         ((_pitch - width) & 0xFFFF) << 16 | (_pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
@@ -210,8 +210,8 @@ Framebuffer::fill_rect(unsigned int x,
   *(FG + 2) = *FG;
   *(FG + 3) = *FG;
 
-  dma_enqueue_operation(FG,
-                        (unsigned int*)(fb_pointer(x, y)),
+  dma_enqueue_operation((unsigned char*) FG,
+                        fb_pointer(x, y),
                         (((height - 1) & 0xFFFF) << 16) | (width & 0xFFFF),
                         ((_pitch - width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_DEST_INC | DMA_TI_2DMODE);
@@ -262,8 +262,8 @@ Framebuffer::putc(unsigned row,
     memcpy(_cursor_buffer, p_glyph, _font_width * _font_height);
   }
 
-  dma_enqueue_operation((unsigned int*)p_glyph,
-                        (unsigned int*)(fb_pointer(column * _font_width, row * _font_height)),
+  dma_enqueue_operation(p_glyph,
+                        fb_pointer(column * _font_width, row * _font_height),
                         (((_font_height - 1) & 0xFFFF) << 16) | (_font_width & 0xFFFF),
                         ((_pitch - _font_width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
