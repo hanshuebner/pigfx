@@ -62,6 +62,10 @@ $(LIBVTERM)(%.o): libvterm/src/%.c $(patsubst %.tbl,%.inc,$(wildcard libvterm/sr
 	@$(ARMGNU)-ar cq $(LIBVTERM) $*.o
 	@$(RM) -f $*.o
 
+$(LIBUSPI):
+	@echo "COMPILE libuspi"
+	@cd uspi/lib && make
+
 %.hex : %.elf 
 	@$(ARMGNU)-objcopy $< -O ihex $@
 	@echo "OBJCOPY $< -> $@"
@@ -78,7 +82,7 @@ install: kernel
 	cp bin/kernel.img /Volumes/PIGFX/
 	diskutil umountdisk PIGFX
 
-.PHONY clean :
+clean:
 	rm -f $(SRC_DIR)/pigfx_config.h
 	rm -f $(BUILD_DIR)/*
 	rm -f *.hex
@@ -86,3 +90,5 @@ install: kernel
 	rm -f *.img
 	rm -f *.dump
 	rm -f tags
+
+.PHONY: $(LIBUSPI)
