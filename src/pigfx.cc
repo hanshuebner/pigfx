@@ -3,6 +3,8 @@
 #include <sstream>
 #include <memory>
 
+#include "uspi_types.h"
+
 #include <uspi.h>
 #include <vterm.h>
 

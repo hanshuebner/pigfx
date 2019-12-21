@@ -1,6 +1,7 @@
 
 ARMGNU ?= arm-none-eabi
-LIBVTERM_CFLAGS = -O0 -g -nostdlib -nostartfiles -fno-stack-limit -ffreestanding -mfloat-abi=soft -Iuspi/include -Ilibvterm/include
+ARCH = -march=armv6j -mtune=arm1176jzf-s -mfloat-abi=soft
+LIBVTERM_CFLAGS = $(ARCH) -O0 -g -nostdlib -nostartfiles -fno-stack-limit -ffreestanding -Iuspi/include -Ilibvterm/include
 CFLAGS = -Wall -Wextra $(LIBVTERM_CFLAGS)
 CXXFLAGS = -std=c++17 -Ilru-cache/include
 
@@ -64,7 +65,7 @@ $(LIBVTERM)(%.o): libvterm/src/%.c $(patsubst %.tbl,%.inc,$(wildcard libvterm/sr
 
 $(LIBUSPI):
 	@echo "COMPILE libuspi"
-	@cd uspi/lib && make
+	cd uspi && ln -sf ../uspi-config.mk Config.mk && cd lib && make
 
 %.hex : %.elf 
 	@$(ARMGNU)-objcopy $< -O ihex $@
@@ -83,6 +84,7 @@ install: kernel
 	diskutil umountdisk PIGFX
 
 clean:
+	cd uspi/lib && make clean
 	rm -f $(SRC_DIR)/pigfx_config.h
 	rm -f $(BUILD_DIR)/*
 	rm -f *.hex
