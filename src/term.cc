@@ -33,7 +33,7 @@ Terminal::Terminal(shared_ptr<Framebuffer> framebuffer)
   _callbacks.movecursor = term_movecursor;
   _callbacks.moverect = term_moverect;
 
-  vterm_screen_set_callbacks(_screen, &_callbacks, 0);
+  vterm_screen_set_callbacks(_screen, &_callbacks, this);
   vterm_screen_enable_altscreen(_screen, 1);
   vterm_screen_reset(_screen, 1);
 }

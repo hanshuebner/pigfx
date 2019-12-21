@@ -37,6 +37,12 @@ public:
                  unsigned int columns,
                  GFX_COL background_color);
 
+  void fill_rect(unsigned int x,
+                 unsigned int y,
+                 unsigned int width,
+                 unsigned int height,
+                 GFX_COL color);
+
   void set_cursor(unsigned int row,
                   unsigned int column,
                   __unused unsigned int visible);
@@ -82,11 +88,6 @@ private:
                    unsigned int end_line,
                    unsigned int lines,
                    GFX_COL background_color);
-  void fill_rect(unsigned int x,
-                 unsigned int y,
-                 unsigned int width,
-                 unsigned int height,
-                 GFX_COL color);
 
   unsigned char* fb_pointer(unsigned x, unsigned y) { return _pfb + y * _pitch + x; }
 
