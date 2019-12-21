@@ -4,3 +4,6 @@
 [submodule "lru-cache"]
 	path = lru-cache
 	url = git@github.com:goldsborough/lru-cache.git
+[submodule "uspi"]
+	path = uspi
+	url = git@github.com:rsta2/uspi.git
