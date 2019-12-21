@@ -21,8 +21,8 @@ const unsigned GLYPH_CACHE_SIZE = 1024;
 
 #define MKCOL32(c) ((c) << 24 | (c) << 16 | (c) << 8 | (c))
 
-static void
-dma_execute_queue_and_wait()
+void
+Framebuffer::flush()
 {
   dma_execute_queue();
 
@@ -70,7 +70,7 @@ Framebuffer::clear(GFX_COL background_color)
 
   dma_enqueue_operation(BG, (unsigned int*)(_pfb), _size, 0, DMA_TI_DEST_INC);
 
-  dma_execute_queue_and_wait();
+  flush();
 }
 
 void
@@ -140,7 +140,7 @@ Framebuffer::scroll_up(unsigned int start_line,
                           DMA_TI_DEST_INC);
   }
 
-  dma_execute_queue_and_wait();
+  flush();
 }
 
 void
@@ -173,7 +173,7 @@ Framebuffer::scroll_down(unsigned int start_line,
                           0,
                           DMA_TI_DEST_INC);
   }
-  dma_execute_queue_and_wait();
+  flush();
 }
 
 void
@@ -193,7 +193,7 @@ Framebuffer::move_rect(unsigned int from_row,
                         ((height & 0xFFFF) << 16) | (width & 0xFFFF),
                         ((_pitch - width) & 0xFFFF) << 16 | (_pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
-  dma_execute_queue_and_wait();
+  flush();
   save_cursor_content(_cursor_row, _cursor_column);
 }
 
@@ -215,7 +215,7 @@ Framebuffer::fill_rect(unsigned int x,
                         (((height - 1) & 0xFFFF) << 16) | (width & 0xFFFF),
                         ((_pitch - width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_DEST_INC | DMA_TI_2DMODE);
-  dma_execute_queue_and_wait();
+  flush();
 }
 
 shared_ptr<Framebuffer::Glyph>
@@ -224,8 +224,10 @@ Framebuffer::make_glyph(const Framebuffer::GlyphKey key)
   unsigned char* p_glyph = (unsigned char*)(_font_data + (get<0>(key) * _font_width * _font_height));
   auto glyph = make_shared<Glyph>(_font_width * _font_height);
   unsigned char* p = glyph->_data;
+  const GFX_COL foreground_color = get<1>(key);
+  const GFX_COL background_color = get<2>(key);
   for (int i = 0; i < _font_height * _font_width; i++) {
-    *p++ = *p_glyph++ ? get<1>(key) : get<2>(key);
+    *p++ = *p_glyph++ ? foreground_color : background_color;
   }
   return glyph;
 }
@@ -262,11 +264,9 @@ Framebuffer::putc(unsigned row,
 
   dma_enqueue_operation((unsigned int*)p_glyph,
                         (unsigned int*)(fb_pointer(column * _font_width, row * _font_height)),
-                        ((_font_height & 0xFFFF) << 16) | (_font_width & 0xFFFF),
+                        (((_font_height - 1) & 0xFFFF) << 16) | (_font_width & 0xFFFF),
                         ((_pitch - _font_width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
-
-  dma_execute_queue_and_wait();
 }
 
 void

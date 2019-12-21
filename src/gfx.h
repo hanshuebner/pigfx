@@ -49,6 +49,8 @@ public:
 
   void handle_cursor();
 
+  void flush();
+
   unsigned int width() const { return _width; }
   unsigned int height() const { return _height; }
   unsigned int font_width() const { return _font_width; }

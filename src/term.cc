@@ -52,6 +52,7 @@ Terminal::damage(VTermRect rect)
       _framebuffer->putc(pos.row, pos.col, cell.chars[0], fg, bg);
     }
   }
+  _framebuffer->flush();
   return 1;
 }
 
