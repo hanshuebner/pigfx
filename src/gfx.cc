@@ -19,7 +19,16 @@ dma_buffer mem_buff_dma;
 
 const unsigned GLYPH_CACHE_SIZE = 1024;
 
-#define MKCOL32(c) ((c) << 24 | (c) << 16 | (c) << 8 | (c))
+class ColorBuffer {
+public:
+  ColorBuffer(GFX_COL color) {
+    memset(_buf, color, sizeof(_buf));
+  }
+  const unsigned char* bytes() const { return (const unsigned char*) mem_2uncached(_buf); }
+
+private:
+  char _buf[4];
+};
 
 void
 Framebuffer::flush()
@@ -62,13 +71,9 @@ Framebuffer::Framebuffer(unsigned char* p_framebuffer,
 void
 Framebuffer::clear(GFX_COL background_color)
 {
-  unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
-  *BG = MKCOL32(background_color);
-  *(BG + 1) = *BG;
-  *(BG + 2) = *BG;
-  *(BG + 3) = *BG;
+  ColorBuffer color_buffer(background_color);
 
-  dma_enqueue_operation((unsigned char*) BG, _pfb, _size, 0, DMA_TI_DEST_INC);
+  dma_enqueue_operation(color_buffer.bytes(), _pfb, _size, 0, DMA_TI_DEST_INC);
 
   flush();
 }
@@ -127,13 +132,9 @@ Framebuffer::scroll_up(unsigned int start_line,
                           DMA_TI_SRC_INC | DMA_TI_DEST_INC);
   }
   {
-    unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
-    BG[0] = MKCOL32(background_color);
-    BG[1] = BG[0];
-    BG[2] = BG[0];
-    BG[3] = BG[0];
+    ColorBuffer color_buffer(background_color);
 
-    dma_enqueue_operation((unsigned char*) BG,
+    dma_enqueue_operation(color_buffer.bytes(),
                           _pfb + (end_line - lines + 1) * pixels_per_line,
                           lines * pixels_per_line,
                           0,
@@ -161,13 +162,9 @@ Framebuffer::scroll_down(unsigned int start_line,
                           DMA_TI_SRC_INC | DMA_TI_DEST_INC);
   }
   {
-    unsigned int* BG = (unsigned int*)mem_2uncached(mem_buff_dma);
-    BG[0] = MKCOL32(background_color);
-    BG[1] = BG[0];
-    BG[2] = BG[0];
-    BG[3] = BG[0];
+    ColorBuffer color_buffer(background_color);
 
-    dma_enqueue_operation((unsigned char*) BG,
+    dma_enqueue_operation(color_buffer.bytes(),
                           _pfb + start_line * pixels_per_line,
                           lines * pixels_per_line,
                           0,
@@ -204,13 +201,9 @@ Framebuffer::fill_rect(unsigned int x,
                        unsigned int height,
                        GFX_COL color)
 {
-  unsigned int* FG = (unsigned int*)mem_2uncached(mem_buff_dma) + 4;
-  *FG = MKCOL32(color);
-  *(FG + 1) = *FG;
-  *(FG + 2) = *FG;
-  *(FG + 3) = *FG;
+  ColorBuffer color_buffer(color);
 
-  dma_enqueue_operation((unsigned char*) FG,
+  dma_enqueue_operation(color_buffer.bytes(),
                         fb_pointer(x, y),
                         (((height - 1) & 0xFFFF) << 16) | (width & 0xFFFF),
                         ((_pitch - width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */

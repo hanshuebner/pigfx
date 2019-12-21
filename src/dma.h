@@ -15,7 +15,7 @@ extern "C" {
 #define DMA_TI_INTEN (1 << 0)
 
 void dma_init();
-int dma_enqueue_operation(unsigned char* src,
+int dma_enqueue_operation(const unsigned char* src,
                           unsigned char* dst,
                           unsigned int len,
                           unsigned int stride,
