@@ -6,14 +6,12 @@
 #include <map>
 #include <string>
 
-#include "Terminal.h"
-
 using namespace std;
 
 class Keyboard
 {
 public:
-  Keyboard(Terminal& terminal);
+  Keyboard();
 
   void handle_report(unsigned char modifiers,
                      const unsigned char keys[6]);
@@ -22,13 +20,23 @@ private:
   struct KeyDefinition;
   class KeypressHandler;
 
-  Terminal& _terminal;
   set<unsigned char> _keys_pressed;
   bool _error;
   map<unsigned char, KeyDefinition*> _map;
 
   void key_pressed(unsigned char modifiers,
                    unsigned char key_code);
+
+  enum Modifiers {
+                  LeftControl = 1,
+                  LeftShift = 2,
+                  Alt = 4,
+                  LeftMeta = 8,
+                  RightControl = 16,
+                  RightShift = 32,
+                  AltGr = 64,
+                  RightMeta = 128
+  };
 
   struct KeyDefinition
   {
@@ -57,6 +65,16 @@ private:
     virtual const string operator()() const { return _s; }
 
     const string _s;
+  };
+
+  class Char
+    : public KeypressHandler
+  {
+  public:
+    Char(const unsigned char c) : _c(c) {}
+    virtual const string operator()() const { return string(1, _c); }
+
+    const unsigned char _c;
   };
 
   class DeadKey

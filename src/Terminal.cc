@@ -1,3 +1,4 @@
+#include <sstream>
 
 #include "Terminal.h"
 
@@ -19,8 +20,10 @@ term_moverect(VTermRect dest, VTermRect src, void* terminal)
   return reinterpret_cast<Terminal*>(terminal)->moverect(dest, src);
 }
 
-Terminal::Terminal(shared_ptr<Framebuffer> framebuffer)
-  : _framebuffer(framebuffer)
+Terminal::Terminal(shared_ptr<Framebuffer> framebuffer,
+                   shared_ptr<Keyboard> keyboard)
+  : _framebuffer(framebuffer),
+    _keyboard(keyboard)
 {
   unsigned rows = framebuffer->height() / framebuffer->font_height();
   unsigned columns = framebuffer->width() / framebuffer->font_width();

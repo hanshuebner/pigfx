@@ -2,8 +2,6 @@
 #include <cstring>
 #include <memory>
 #include <string>
-#include <sstream>
-#include <iomanip>
 
 #include "uspi_types.h"
 
@@ -19,6 +17,7 @@
 
 #include "Terminal.h"
 #include "Framebuffer.h"
+#include "Keyboard.h"
 
 #ifndef __unused
 #define __unused __attribute__((unused))
@@ -84,31 +83,25 @@ uart0_getbaud()
 /* ---------------------------------------------------------------------------------------------------
  */
 
-static shared_ptr<Terminal> debug_terminal;
+static shared_ptr<Terminal> terminal;
 
-static void
+void
 debug(const char* const s)
 {
-  if (debug_terminal != nullptr) {
-    debug_terminal->output(s, strlen(s));
+  if (terminal != nullptr) {
+    terminal->output(s, strlen(s));
   }
+
+  uart_write(s, strlen(s));
 }
+
+static shared_ptr<Keyboard> keyboard;
 
 static void
 keyboard_handler(unsigned char modifiers,
                  const unsigned char raw_keys[6])
 {
-  stringstream os;
-  os << "\r\nMOD: " << setbase(2) << setw(8) << setfill('0') << (unsigned int) modifiers;
-  for (int i = 0; i < 6; i++) {
-    if (raw_keys[i]) {
-      os << ' ' << hex << setw(2) << setfill('0') << (unsigned int) raw_keys[i];
-    }
-  }
-  os << "\r\n";
-  debug(os.str().c_str());
-
-  //  uart_write(str, strlen(str));
+  keyboard->handle_report(modifiers, raw_keys);
 }
 
 static void
@@ -236,9 +229,11 @@ entry_point()
   initialize_hardware();
 
   auto framebuffer = make_shared<Framebuffer>();
-  auto terminal = make_shared<Terminal>(framebuffer);
+  auto keyboard = make_shared<Keyboard>();
+  auto terminal = make_shared<Terminal>(framebuffer, keyboard);
 
-  ::debug_terminal = terminal;
+  ::terminal = terminal;
+  ::keyboard = keyboard;
 
   while (1) {
     if (uart_buffer_start != uart_buffer_end) {

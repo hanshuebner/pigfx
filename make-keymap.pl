@@ -11,8 +11,8 @@ sub parse_spec {
         return "new String(\"\\x1b[$1\")";
     } elsif ($input =~ /^(".*")$/) {
         return "new String($1)";
-    } elsif ($input =~ /^0x(..)$/) {
-        return "new String(\"\\x$1\")";
+    } elsif ($input =~ /^(0x..)$/) {
+        return "new Char($1)";
     } else {
         die "cannot parse key spec $input";
     }
