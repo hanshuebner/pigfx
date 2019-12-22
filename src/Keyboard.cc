@@ -61,8 +61,8 @@ Keyboard::handle_report(unsigned char modifiers,
     if (keys[i]) {
       if (!_keys_pressed.count(keys[i])) {
         key_pressed(modifiers, keys[i]);
-        keys_pressed_now.insert(keys[i]);
       }
+      keys_pressed_now.insert(keys[i]);
     }
   }
   _keys_pressed = keys_pressed_now;
