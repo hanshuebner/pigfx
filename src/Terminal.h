@@ -4,7 +4,7 @@
 
 #include <vterm.h>
 
-#include "gfx.h"
+#include "Framebuffer.h"
 
 using namespace std;
 

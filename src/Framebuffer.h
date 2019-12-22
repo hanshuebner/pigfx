@@ -15,11 +15,7 @@ using GFX_COL = unsigned char;
 class Framebuffer
 {
 public:
-  Framebuffer(unsigned char* p_framebuffer,
-              unsigned int width,
-              unsigned int height,
-              unsigned int pitch,
-              unsigned int size);
+  Framebuffer();
 
   void clear(GFX_COL background_color);
 

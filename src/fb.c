@@ -1,4 +1,4 @@
-#include "framebuffer.h"
+#include "fb.h"
 
 #include "console.h"
 #include "pigfx_config.h"

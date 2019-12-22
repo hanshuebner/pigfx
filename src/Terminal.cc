@@ -1,5 +1,5 @@
-#include "term.h"
-#include "gfx.h"
+
+#include "Terminal.h"
 
 static int
 term_damage(VTermRect rect, void* terminal)

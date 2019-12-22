@@ -1,5 +1,4 @@
-#ifndef _FRAMEBUFFER_H_
-#define _FRAMEBUFFER_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,4 +40,3 @@ extern FB_RETURN_TYPE fb_allocate_buffer(void** ppBuffer, unsigned int* pBufferS
 };
 #endif
 
-#endif

@@ -11,15 +11,14 @@
 #include <vterm.h>
 
 #include "console.h"
-#include "dma.h"
-#include "framebuffer.h"
-#include "gfx.h"
 #include "irq.h"
 #include "pigfx_config.h"
 #include "timer.h"
 #include "uart.h"
-#include "term.h"
 #include "hwutils.h"
+
+#include "Terminal.h"
+#include "Framebuffer.h"
 
 #ifndef __unused
 #define __unused __attribute__((unused))
@@ -206,33 +205,6 @@ heartbeat_loop()
   }
 }
 
-shared_ptr<Framebuffer>
-initialize_framebuffer()
-{
-  usleep(10000);
-  fb_release();
-
-  unsigned char* p_fb = 0;
-  unsigned int fbsize;
-  unsigned int pitch;
-
-  unsigned int p_w = 800;
-  unsigned int p_h = 600;
-  unsigned int v_w = p_w;
-  unsigned int v_h = p_h;
-
-  fb_init(p_w, p_h, v_w, v_h, 8, (void**)&p_fb, &fbsize, &pitch);
-
-  fb_set_xterm_palette();
-
-  if (fb_get_physical_buffer_size(&p_w, &p_h) != FB_SUCCESS) {
-  }
-
-  usleep(10000);
-
-  return make_shared<Framebuffer>(p_fb, v_w, v_h, pitch, fbsize);
-}
-
 extern "C" void heap_init();
 
 void
@@ -263,7 +235,7 @@ entry_point()
 {
   initialize_hardware();
 
-  auto framebuffer = initialize_framebuffer();
+  auto framebuffer = make_shared<Framebuffer>();
   auto terminal = make_shared<Terminal>(framebuffer);
 
   ::debug_terminal = terminal;

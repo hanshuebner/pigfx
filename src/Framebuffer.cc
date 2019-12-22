@@ -4,10 +4,12 @@
 #include <memory>
 #include <map>
 
-#include "gfx.h"
 #include "dma.h"
 #include "hwutils.h"
+#include "fb.h"
 #include "timer.h"
+
+#include "Framebuffer.h"
 
 using namespace std;
 
@@ -39,17 +41,8 @@ Framebuffer::flush()
     ; // Busy wait for DMA to finish
 }
 
-Framebuffer::Framebuffer(unsigned char* p_framebuffer,
-                         unsigned int width,
-                         unsigned int height,
-                         unsigned int pitch,
-                         unsigned int size)
-  :  _width(width),
-     _pitch(pitch),
-     _full_pfb(p_framebuffer),
-     _full_size(size),
-     _full_height(height),
-     _font_height(20),
+Framebuffer::Framebuffer()
+  :  _font_height(20),
      _font_width(10),
      _font_data(&G_FONT_GLYPHS),
      _cursor_row(0),
@@ -59,6 +52,25 @@ Framebuffer::Framebuffer(unsigned char* p_framebuffer,
      _glyph_cache(GLYPH_CACHE_SIZE)
 {
   dma_init();
+
+  usleep(10000);
+  fb_release();
+
+  unsigned int p_w = 800;
+  unsigned int p_h = 600;
+  unsigned int v_w = p_w;
+  unsigned int v_h = p_h;
+
+  fb_init(p_w, p_h, v_w, v_h, 8, (void**)&_full_pfb, &_full_size, &_pitch);
+
+  fb_set_xterm_palette();
+
+  if (fb_get_physical_buffer_size(&p_w, &p_h) != FB_SUCCESS) {
+  }
+
+  _full_height = p_h;
+
+  usleep(10000);
 
   unsigned int lines = _full_height / _font_height;
   unsigned border_top_bottom = (_full_height - (lines * _font_height)) / 2;
@@ -297,3 +309,4 @@ Framebuffer::handle_cursor()
     _cursor_blink_state = cursor_blink_state;
   }
 }
+
