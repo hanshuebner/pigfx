@@ -1,7 +1,9 @@
 
+#include <cstring>
+#include <memory>
 #include <string>
 #include <sstream>
-#include <memory>
+#include <iomanip>
 
 #include "uspi_types.h"
 
@@ -83,14 +85,31 @@ uart0_getbaud()
 /* ---------------------------------------------------------------------------------------------------
  */
 
-static void
-_keypress_handler(const char* str)
-{
-  const char* c = str;
+static shared_ptr<Terminal> debug_terminal;
 
-  while (*c) {
-    uart_write(c++, 1);
+static void
+debug(const char* const s)
+{
+  if (debug_terminal != nullptr) {
+    debug_terminal->output(s, strlen(s));
   }
+}
+
+static void
+keyboard_handler(unsigned char modifiers,
+                 const unsigned char raw_keys[6])
+{
+  stringstream os;
+  os << "\r\nMOD: " << setbase(2) << setw(8) << setfill('0') << (unsigned int) modifiers;
+  for (int i = 0; i < 6; i++) {
+    if (raw_keys[i]) {
+      os << ' ' << hex << setw(2) << setfill('0') << (unsigned int) raw_keys[i];
+    }
+  }
+  os << "\r\n";
+  debug(os.str().c_str());
+
+  //  uart_write(str, strlen(str));
 }
 
 static void
@@ -234,7 +253,7 @@ initialize_hardware()
 
   if (USPiInitialize()) {
     if (USPiKeyboardAvailable()) {
-      USPiKeyboardRegisterKeyPressedHandler(_keypress_handler);
+      USPiKeyboardRegisterKeyStatusHandlerRaw(keyboard_handler);
     }
   }
 }
@@ -247,11 +266,7 @@ entry_point()
   auto framebuffer = initialize_framebuffer();
   auto terminal = make_shared<Terminal>(framebuffer);
 
-  stringstream os;
-  os << "Hello from C++!\r\n";
-
-  string s = os.str();
-  terminal->output(s.c_str(), s.length());
+  ::debug_terminal = terminal;
 
   while (1) {
     if (uart_buffer_start != uart_buffer_end) {
