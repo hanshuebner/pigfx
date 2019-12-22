@@ -76,6 +76,7 @@ Framebuffer::Framebuffer()
   unsigned border_top_bottom = (_full_height - (lines * _font_height)) / 2;
 
   _pfb = _full_pfb + (border_top_bottom * _pitch);
+  _width = p_w;
   _height = _full_height - (border_top_bottom * 2);
   _size = _full_size - (border_top_bottom * 2 * _pitch);
 }
