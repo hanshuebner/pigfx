@@ -4,6 +4,7 @@ ARCH = -march=armv6j -mtune=arm1176jzf-s -mfloat-abi=soft
 LIBVTERM_CFLAGS = $(ARCH) -O0 -g -nostdlib -nostartfiles -fno-stack-limit -ffreestanding -Iuspi/include -Ilibvterm/include
 CFLAGS = -Wall -Wextra $(LIBVTERM_CFLAGS)
 CXXFLAGS = -std=c++17 -Ilru-cache/include
+DEPFLAGS = -MT $@ -MMD -MP -MF $@.d
 
 ## asm must be the first module
 MODULES = asm uart irq hwutils timer fb postman console dma	\
@@ -45,7 +46,7 @@ dump: pigfx.elf
 
 $(BUILD_DIR)/%.o : $(SRC_DIR)/%.c
 	@echo "CC $<"
-	@$(ARMGNU)-gcc $(CFLAGS) -c $< -o $@
+	@$(ARMGNU)-gcc $(DEPFLAGS) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o : $(SRC_DIR)/%.s 
 	@echo "AS $<"
@@ -53,7 +54,7 @@ $(BUILD_DIR)/%.o : $(SRC_DIR)/%.s
 
 $(BUILD_DIR)/%.o : $(SRC_DIR)/%.cc 
 	@echo "C++ $<"
-	@$(ARMGNU)-c++ $(CFLAGS) $(CXXFLAGS) -c $< -o $@
+	@$(ARMGNU)-c++ $(DEPFLAGS) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
 
 $(LIBVTERM): $(patsubst libvterm/src/%.c,$(LIBVTERM)(%.o),$(wildcard libvterm/src/*.c))
 
@@ -99,4 +100,5 @@ clean:
 .PHONY: $(LIBUSPI)
 
 src/keymap.inc: keymap.txt make-keymap.pl
-src/Keyboard.cc: src/keymap.inc
+
+include $(wildcard build/*.d)
