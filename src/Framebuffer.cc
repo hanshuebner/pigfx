@@ -49,7 +49,8 @@ Framebuffer::Framebuffer()
      _cursor_row(0),
      _cursor_column(0),
      _cursor_color(9),
-     _cursor_blink_state(0),
+     _cursor_blink_state(true),
+     _last_activity(time_microsec()),
      _glyph_cache(GLYPH_CACHE_SIZE)
 {
   dma_init();
@@ -342,18 +343,26 @@ Framebuffer::set_cursor(unsigned int row,
 }
 
 void
+Framebuffer::touch()
+{
+  _last_activity = time_microsec();
+  _cursor_blink_state = false;
+}
+
+void
 Framebuffer::handle_cursor()
 {
-  int cursor_blink_state = (time_microsec() % 800000) > 400000;
+  const unsigned blink_period = cursor_blink_freq * 1000000;
+  const bool blink_state = ((time_microsec() - _last_activity) % blink_period) < (blink_period / 2);
 
-  if (_cursor_blink_state != cursor_blink_state) {
+  if (_cursor_blink_state != blink_state) {
     unsigned char* pb = _cursor_buffer;
     unsigned char* pfb = fb_pointer(_cursor_column * _font_width,
                                     _cursor_row * _font_height);
 
     for (int y = 0; y < _font_height; y++) {
       for (int x = 0; x < _font_width; x++) {
-        if (cursor_blink_state) {
+        if (blink_state) {
           pfb[x] = _cursor_color;
         } else {
           pfb[x] = *pb++;
@@ -362,7 +371,7 @@ Framebuffer::handle_cursor()
       pfb += _pitch;
     }
 
-    _cursor_blink_state = cursor_blink_state;
+    _cursor_blink_state = blink_state;
   }
 }
 

@@ -49,6 +49,7 @@ public:
   void handle_cursor();
 
   void flush();
+  void touch();
 
   unsigned int width() const { return _width; }
   unsigned int height() const { return _height; }
@@ -70,11 +71,13 @@ private:
   int _font_width;
   unsigned char* _font_data;
 
+  const float cursor_blink_freq = 1.5;
   unsigned int _cursor_row;
   unsigned int _cursor_column;
   unsigned int _cursor_color;
   unsigned char _cursor_buffer[10 * 20];
-  int _cursor_blink_state;
+  bool _cursor_blink_state;
+  unsigned int _last_activity;
 
   void save_cursor_content(unsigned int row,
                            unsigned int column);

@@ -84,4 +84,5 @@ void
 Terminal::output(const char* const s, unsigned length)
 {
   vterm_input_write(_term, s, length);
+  _framebuffer->touch();
 }
