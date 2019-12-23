@@ -1,6 +1,7 @@
 
 #include <cstring>
 #include <algorithm>
+#include <utility>
 #include <memory>
 #include <map>
 
@@ -224,31 +225,85 @@ Framebuffer::fill_rect(unsigned int x,
   flush();
 }
 
-shared_ptr<Framebuffer::Glyph>
-Framebuffer::make_glyph(const Framebuffer::GlyphKey key)
+Framebuffer::Glyph::Glyph(unsigned int width, unsigned int height)
+  : _width(width), _height(height)
 {
-  unsigned char* p_glyph = (unsigned char*)(_font_data + (get<0>(key) * _font_width * _font_height));
-  auto glyph = make_shared<Glyph>(_font_width * _font_height);
+  _data = new unsigned char[width * height];
+}
+
+shared_ptr<Framebuffer::Glyph>
+Framebuffer::make_glyph(const unsigned char c,
+                        const GFX_COL _foreground_color,
+                        const GFX_COL _background_color,
+                        const VTermScreenCellAttrs attributes)
+{
+  GFX_COL foreground_color = _foreground_color;
+  GFX_COL background_color = _background_color;
+  if (attributes.reverse) {
+    swap(foreground_color, background_color);
+  }
+
+  const unsigned int glyph_size = c * _font_width * _font_height * (attributes.dwl ? 2 : 1);
+
+  unsigned char* p_font_glyph = (unsigned char*)(_font_data + glyph_size);
+  auto glyph = make_shared<Glyph>(_font_width * (attributes.dwl ? 2 : 1), _font_height);
   unsigned char* p = glyph->_data;
-  const GFX_COL foreground_color = get<1>(key);
-  const GFX_COL background_color = get<2>(key);
-  for (int i = 0; i < _font_height * _font_width; i++) {
-    *p++ = *p_glyph++ ? foreground_color : background_color;
+
+  if (attributes.dwl) {
+    switch (attributes.dhl) {
+    case 0:
+      // Double width
+      for (int i = 0; i < _font_height * _font_width; i++) {
+        const unsigned char color = *p_font_glyph++ ? foreground_color : background_color;
+        *p++ = color;
+        *p++ = color;
+      }
+      break;
+    case 1:
+      // Double width and double height, top half
+      for (int y = 0; y < _font_height / 2; y++) {
+        for (int i = 0; i < 2; i++) {
+          for (int x = 0; x < _font_width; x++) {
+            const unsigned char color = p_font_glyph[y * _font_width + x] ? foreground_color : background_color;
+            *p++ = color;
+            *p++ = color;
+          }
+        }
+      }
+      break;
+    case 2:
+      // Double width and double height, bottom half
+      for (int y = _font_height / 2; y < _font_height; y++) {
+        for (int i = 0; i < 2; i++) {
+          for (int x = 0; x < _font_width; x++) {
+            const unsigned char color = p_font_glyph[y * _font_width + x] ? foreground_color : background_color;
+            *p++ = color;
+            *p++ = color;
+          }
+        }
+      }
+      break;
+    }
+  } else {
+    for (int i = 0; i < _font_height * _font_width; i++) {
+      *p++ = *p_font_glyph++ ? foreground_color : background_color;
+    }
   }
   return glyph;
 }
 
 shared_ptr<Framebuffer::Glyph>
-Framebuffer::get_glyph(unsigned char c,
-                       GFX_COL foreground_color,
-                       GFX_COL background_color)
+Framebuffer::get_glyph(const unsigned char c,
+                       const GFX_COL foreground_color,
+                       const GFX_COL background_color,
+                       const VTermScreenCellAttrs attributes)
 {
   shared_ptr<Glyph> glyph;
-  const auto key = GlyphKey(c, foreground_color, background_color);
+  const auto key = GlyphKey(c, foreground_color, background_color, *reinterpret_cast<const unsigned long *>(&attributes));
   if (_glyph_cache.contains(key)) {
     glyph = _glyph_cache.lookup(key);
   } else {
-    glyph = make_glyph(key);
+    glyph = make_glyph(c, foreground_color, background_color, attributes);
     _glyph_cache.emplace(key, glyph);
   }
 
@@ -256,22 +311,24 @@ Framebuffer::get_glyph(unsigned char c,
 }
 
 void
-Framebuffer::putc(unsigned row,
-                  unsigned column,
-                  unsigned char c,
-                  GFX_COL foreground_color,
-                  GFX_COL background_color)
+Framebuffer::putc(const unsigned row,
+                  const unsigned column,
+                  const unsigned char c,
+                  const VTermColor& foreground_color,
+                  const VTermColor& background_color,
+                  const VTermScreenCellAttrs attributes)
 {
-  unsigned char* p_glyph = get_glyph(c, foreground_color, background_color)->_data;
+  shared_ptr<Glyph> glyph = get_glyph(c, foreground_color.indexed.idx, background_color.indexed.idx, attributes);
+  unsigned char* p_glyph = glyph->_data;
 
   if (row == _cursor_row && column == _cursor_column) {
-    memcpy(_cursor_buffer, p_glyph, _font_width * _font_height);
+    memcpy(_cursor_buffer, p_glyph, _font_width * _font_height); // fixme: cursor dbw/dbh
   }
 
   dma_enqueue_operation(p_glyph,
-                        fb_pointer(column * _font_width, row * _font_height),
-                        (((_font_height - 1) & 0xFFFF) << 16) | (_font_width & 0xFFFF),
-                        ((_pitch - _font_width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
+                        fb_pointer(column * glyph->_width, row * _font_height),
+                        (((_font_height - 1) & 0xFFFF) << 16) | (glyph->_width & 0xFFFF),
+                        ((_pitch - glyph->_width) & 0xFFFF) << 16, /* bits 31:16 destination stride, 15:0 source stride */
                         DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
 }
 

@@ -49,10 +49,7 @@ Terminal::damage(VTermRect rect)
     for (pos.col = rect.start_col; pos.col < rect.end_col; pos.col++) {
       VTermScreenCell cell;
       vterm_screen_get_cell(_screen, pos, &cell);
-      int color = cell.attrs.bold ? 15 : 7;
-      int fg = cell.attrs.reverse ? 0 : color;
-      int bg = cell.attrs.reverse ? color : 0;
-      _framebuffer->putc(pos.row, pos.col, cell.chars[0], fg, bg);
+      _framebuffer->putc(pos.row, pos.col, cell.chars[0], cell.fg, cell.bg, cell.attrs);
     }
   }
   _framebuffer->flush();

@@ -8,6 +8,8 @@
 #include <lru/lru.hpp>
 #pragma GCC diagnostic pop
 
+#include <vterm.h>
+
 using namespace std;
 
 using GFX_COL = unsigned char;
@@ -19,11 +21,12 @@ public:
 
   void clear(GFX_COL background_color);
 
-  void putc(unsigned row,
-            unsigned column,
-            unsigned char c,
-            GFX_COL foreground_color,
-            GFX_COL background_color);
+  void putc(const unsigned row,
+            const unsigned column,
+            const unsigned char c,
+            const VTermColor& foreground_color,
+            const VTermColor& background_color,
+            const VTermScreenCellAttrs attributes);
 
   void move_rect(unsigned int from_row,
                  unsigned int from_column,
@@ -91,16 +94,22 @@ private:
 
   struct Glyph
   {
-    Glyph(unsigned int size) { _data = new unsigned char[size]; }
+    Glyph(unsigned int width, unsigned int height);
     ~Glyph() { delete _data; }
+    unsigned int _width;
+    unsigned int _height;
     unsigned char* _data;
   };
 
-  using GlyphKey = tuple<char, GFX_COL, GFX_COL>;
-  shared_ptr<Glyph> make_glyph(GlyphKey);
-  shared_ptr<Glyph> get_glyph(unsigned char c,
-                              GFX_COL foreground_color,
-                              GFX_COL background_color);
+  using GlyphKey = tuple<char, GFX_COL, GFX_COL, unsigned long>;
+  shared_ptr<Glyph> make_glyph(const unsigned char c,
+                               const GFX_COL foreground_color,
+                               const GFX_COL background_color,
+                               const VTermScreenCellAttrs attributes);
+  shared_ptr<Glyph> get_glyph(const unsigned char c,
+                              const GFX_COL foreground_color,
+                              const GFX_COL background_color,
+                              const VTermScreenCellAttrs attributes);
 
   using Cache = LRU::Cache<GlyphKey, shared_ptr<Glyph>>;
   Cache _glyph_cache;
