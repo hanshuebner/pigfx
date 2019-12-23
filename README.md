@@ -1,23 +1,25 @@
-# PiGFX 
-## Raspberry Pi graphics card / VT220 emulator
+# PiVT
 
-This is a fork of https://github.com/scott5/pigfx with changes to make
-it emulate a VT220 more faithfully.
+## Raspberry Pi VT220 emulator
 
-The bug fixes from scott5's version have been carried over, but
-functionality that is not compatible with the VT220 have been
-removed.  Also, the low-level optimizations that required fonts to be
-always 8 pixels wide have been replaced by straightforward and
-possibly slower code that allows "arbitrary" font dimensions.  This is
-to support faithful rendering of the VT220 font which requires 10 by
-20 pixels for each character.  See https://vt100.net/dec/vt220/glyphs
-for a description of how that works.
+This project started off as a fork of https://github.com/scott5/pigfx
+with the intent to carry over bug fixes from Filippo Bergamasco's
+original version and make it emulate a Digital Equipment VT220
+terminal.  In the process, all of the original terminal emulation code
+has been removed and replaced by https://github.com/neovim/libvterm.
+All new code has been written in C++.
+
+This emulator tries to faithfully render the VT220 font which requires
+10 by 20 pixels for each character.  See
+https://vt100.net/dec/vt220/glyphs for a description of how that
+works.
 
 # License
 
 The MIT License (MIT)
 
 Copyright (c) 2016 Filippo Bergamasco.
+Copyright (c) 2019, 2020 Hans Hübner
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
