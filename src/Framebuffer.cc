@@ -243,9 +243,7 @@ Framebuffer::make_glyph(const unsigned char c,
     swap(foreground_color, background_color);
   }
 
-  const unsigned int glyph_size = c * _font_width * _font_height * (attributes.dwl ? 2 : 1);
-
-  unsigned char* p_font_glyph = (unsigned char*)(_font_data + glyph_size);
+  unsigned char* p_font_glyph = (unsigned char*)(_font_data + c * _font_width * _font_height);
   auto glyph = make_shared<Glyph>(_font_width * (attributes.dwl ? 2 : 1), _font_height);
   unsigned char* p = glyph->_data;
 
