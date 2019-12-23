@@ -95,6 +95,11 @@ Terminal::debug()
 {
   ostringstream os;
 
+  os << "\r\n";
+
+  extern unsigned uart_irq_count;
+  os << "UART IRQ count: " << uart_irq_count << "\r\n";
+
   _framebuffer->get_debug_info(os);
 
   output(os.str().c_str());

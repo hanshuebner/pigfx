@@ -382,7 +382,8 @@ Framebuffer::get_debug_info(ostream& os) const
 {
   auto stats = _glyph_cache.stats();
 
-  os << "\r\nGlyph cache statistics: "
+  os << "Framebuffer\r\n"
+     << "Glyph cache statistics: "
      << stats.total_hits() << " hits, "
      << stats.total_misses() << " misses "
      << "(" << (unsigned) (stats.hit_rate() * 100.0) << "%)"

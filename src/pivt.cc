@@ -29,7 +29,6 @@ using namespace std;
 #define GPCLR0 0x20200028
 
 #define UART_BUFFER_SIZE 16384
-#define HEARTBEAT_FREQUENCY 1
 
 unsigned int led_status;
 volatile unsigned int* UART0_DR;
@@ -104,22 +103,6 @@ keyboard_handler(unsigned char modifiers,
   keyboard->handle_report(modifiers, raw_keys);
 }
 
-static void
-_heartbeat_timer_handler(__unused unsigned hnd,
-                         __unused void* pParam,
-                         __unused void* pContext)
-{
-  if (led_status) {
-    W32(GPCLR0, 1 << 16);
-    led_status = 0;
-  } else {
-    W32(GPSET0, 1 << 16);
-    led_status = 1;
-  }
-
-  attach_timer_handler(1000 / HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
-}
-
 void
 uart_fill_queue(__unused void* data)
 {
@@ -151,51 +134,13 @@ initialize_uart_irq()
   UART0_ITCR = (volatile unsigned int*)0x20201044;
   UART0_FR = (volatile unsigned int*)0x20201018;
 
-  *UART0_IMSC =
-    (1 << 4) | (1 << 7) | (1 << 9); // Masked interrupts: RXIM + FEIM + BEIM
-                                    // (See pag 188 of BCM2835 datasheet)
-  *UART0_ITCR = 0xFFFFFFFF;         // Clear UART0 interrupts
+  *UART0_IMSC = (1 << 4) | (1 << 7) | (1 << 9); // Masked interrupts: RXIM + FEIM + BEIM
+                                                // (See page 188 of BCM2835 datasheet)
+  *UART0_ITCR = 0xFFFFFFFF;                     // Clear UART0 interrupts
 
   pIRQController->Enable_IRQs_2 = RPI_UART_INTERRUPT_IRQ;
   enable_irq();
   irq_attach_handler(57, uart_fill_queue, 0);
-}
-
-void
-heartbeat_init()
-{
-  unsigned int ra;
-  ra = R32(GPFSEL1);
-  ra &= ~(7 << 18);
-  ra |= 1 << 18;
-  W32(GPFSEL1, ra);
-
-  // Enable JTAG pins
-  W32(0x20200000, 0x04a020);
-  W32(0x20200008, 0x65b6c0);
-
-  led_status = 0;
-}
-
-void
-heartbeat_loop()
-{
-  unsigned int last_time = 0;
-  unsigned int curr_time;
-
-  while (1) {
-    curr_time = time_microsec();
-    if (curr_time - last_time > 500000) {
-      if (led_status) {
-        W32(GPCLR0, 1 << 16);
-        led_status = 0;
-      } else {
-        W32(GPSET0, 1 << 16);
-        led_status = 1;
-      }
-      last_time = curr_time;
-    }
-  }
 }
 
 extern "C" void heap_init();
@@ -205,15 +150,12 @@ initialize_hardware()
 {
   heap_init();
 
+  timers_init();
+
   // UART buffer allocation
   uart_buffer = (volatile char*)malloc(UART_BUFFER_SIZE);
 
   uart_init();
-  heartbeat_init();
-
-  timers_init();
-  attach_timer_handler(HEARTBEAT_FREQUENCY, _heartbeat_timer_handler, 0, 0);
-
   initialize_uart_irq();
 
   if (USPiInitialize()) {
@@ -248,7 +190,6 @@ entry_point()
       }
     }
 
-    uart_fill_queue(0);
     timer_poll();
     framebuffer->handle_cursor();
   }
