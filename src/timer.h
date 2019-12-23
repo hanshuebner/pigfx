@@ -1,5 +1,4 @@
-#ifndef _PIGFX_TIMER_H_
-#define _PIGFX_TIMER_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +19,4 @@ extern void timer_poll();
 
 #ifdef __cplusplus
 };
-#endif
-
 #endif

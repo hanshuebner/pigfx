@@ -15,7 +15,9 @@ class Terminal
   Terminal(shared_ptr<Framebuffer> framebuffer,
            shared_ptr<Keyboard> keyboard);
 
-  void output(const char* const string, unsigned int length);
+  void output(const char* const string, unsigned int length = 0);
+
+  void debug();
 
   int damage(VTermRect rect);
   int movecursor(VTermPos position, __unused VTermPos oldPosition, int visible);

@@ -81,6 +81,8 @@ Framebuffer::Framebuffer()
   _width = p_w;
   _height = _full_height - (border_top_bottom * 2);
   _size = _full_size - (border_top_bottom * 2 * _pitch);
+
+  _glyph_cache.monitor();
 }
 
 void
@@ -375,3 +377,14 @@ Framebuffer::handle_cursor()
   }
 }
 
+void
+Framebuffer::get_debug_info(ostream& os) const
+{
+  auto stats = _glyph_cache.stats();
+
+  os << "\r\nGlyph cache statistics: "
+     << stats.total_hits() << " hits, "
+     << stats.total_misses() << " misses "
+     << "(" << (unsigned) (stats.hit_rate() * 100.0) << "%)"
+     << "\r\n";
+}

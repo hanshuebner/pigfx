@@ -1,5 +1,4 @@
-#ifndef _PIGFX_UART_H_
-#define _PIGFX_UART_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,6 +16,4 @@ extern unsigned int uart_read_hex();
 
 #ifdef __cplusplus
 };
-#endif
-
 #endif

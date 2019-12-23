@@ -8,6 +8,8 @@
 
 using namespace std;
 
+class Terminal;
+
 class Keyboard
 {
 public:
@@ -16,6 +18,9 @@ public:
   void handle_report(unsigned char modifiers,
                      const unsigned char keys[6]);
 
+  void attach(Terminal* terminal) { _terminal = terminal; }
+  Terminal* terminal() const { return _terminal; }
+
 private:
   struct KeyDefinition;
   class KeypressHandler;
@@ -23,6 +28,7 @@ private:
   set<unsigned char> _keys_pressed;
   bool _error;
   map<unsigned char, KeyDefinition*> _map;
+  Terminal* _terminal;
 
   void key_pressed(unsigned char modifiers,
                    unsigned char key_code);
@@ -54,7 +60,7 @@ private:
   {
   public:
     virtual ~KeypressHandler() {};
-    virtual const string operator()() const = 0;
+    virtual const string operator()(Keyboard* keyboard) const = 0;
   };
 
   class String
@@ -62,7 +68,7 @@ private:
   {
   public:
     String(const char* s) : _s(s) {}
-    virtual const string operator()() const { return _s; }
+    virtual const string operator()(__unused Keyboard* keyboard) const { return _s; }
 
     const string _s;
   };
@@ -72,7 +78,7 @@ private:
   {
   public:
     Char(const unsigned char c) : _c(c) {}
-    virtual const string operator()() const { return string(1, _c); }
+    virtual const string operator()(__unused Keyboard* keyboard) const { return string(1, _c); }
 
     const unsigned char _c;
   };
@@ -81,8 +87,15 @@ private:
     : public KeypressHandler
   {
   public:
-    virtual const string operator()() const { return ""; }
+    virtual const string operator()(__unused Keyboard* keyboard) const { return ""; }
   };
 
   static DeadKey dead_key;
+
+  class Debug
+    : public KeypressHandler
+  {
+  public:
+    virtual const string operator()(__unused Keyboard* keyboard) const;
+  };
 };

@@ -1,5 +1,4 @@
-#ifndef _POSTMAN_H_
-#define _POSTMAN_H_
+#pragma once
 
 typedef enum
 {
@@ -13,9 +12,5 @@ typedef enum
 #define MAILBOX_WAIT_TIMEOUT 500000
 #define MAILBOX_MAX_MSG_TO_SKIP 20
 
-extern POSTMAN_RETURN_TYPE
-postman_send(unsigned int channel, unsigned int data);
-extern POSTMAN_RETURN_TYPE
-postman_recv(unsigned int channel, unsigned int* out_data);
-
-#endif
+extern POSTMAN_RETURN_TYPE postman_send(unsigned int channel, unsigned int data);
+extern POSTMAN_RETURN_TYPE postman_recv(unsigned int channel, unsigned int* out_data);

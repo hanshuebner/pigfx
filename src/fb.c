@@ -1,7 +1,6 @@
 #include "fb.h"
 
 #include "console.h"
-#include "pigfx_config.h"
 #include "postman.h"
 #include "hwutils.h"
 
@@ -97,16 +96,6 @@ fb_init(unsigned int ph_w,
   if (mailbuffer[1] != 0x80000000)
     return FB_GET_DISPLAY_SIZE_FAIL;
 
-#if ENABLED(FRAMEBUFFER_DEBUG)
-  unsigned int display_w = mailbuffer[5];
-  unsigned int display_h = mailbuffer[6];
-  cout("Display size: ");
-  cout_d(display_w);
-  cout("x");
-  cout_d(display_h);
-  cout_endl();
-#endif
-
   /* Set up screen */
   unsigned int c = 1;
   mailbuffer[c++] = 0; // Request
@@ -179,15 +168,6 @@ fb_init(unsigned int ph_w,
    *       */
   *pp_fb = (void*)mem_p2v(physical_screenbase);
 
-#if ENABLED(FRAMEBUFFER_DEBUG)
-  cout("Screen addr: ");
-  cout_h((unsigned int)*pp_fb);
-  cout_endl();
-  cout("Screen size: ");
-  cout_d(*pfbsize);
-  cout_endl();
-#endif
-
   /* Get the framebuffer pitch (bytes per line) */
   mailbuffer[0] = 7 * 4;   // Total size
   mailbuffer[1] = 0;       // Request
@@ -211,12 +191,6 @@ fb_init(unsigned int ph_w,
 
   if (*pPitch == 0)
     return FB_INVALID_PITCH;
-
-#if ENABLED(FRAMEBUFFER_DEBUG)
-  cout("pitch: ");
-  cout_d(*pPitch);
-  cout_endl();
-#endif
 
   return FB_SUCCESS;
 }

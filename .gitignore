@@ -3,7 +3,6 @@
 sourceme.bash
 build/
 src/keymap.inc
-src/pigfx_config.h
-pigfx.elf
-pigfx.img
-pigfx.hex
+pivt.elf
+pivt.img
+pivt.hex

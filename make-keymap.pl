@@ -14,7 +14,7 @@ sub parse_spec {
     } elsif ($input =~ /^(0x..)$/) {
         return "new Char($1)";
     } else {
-        die "cannot parse key spec $input";
+        return "new $1()";
     }
 }
 

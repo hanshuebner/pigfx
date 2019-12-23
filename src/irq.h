@@ -1,5 +1,4 @@
-#ifndef _IRQ_H_
-#define _IRQ_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +55,4 @@ irq_attach_handler(unsigned int irq, IntHandler* phandler, void* pdata);
 
 #ifdef __cplusplus
 };
-#endif
-
 #endif

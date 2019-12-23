@@ -4,13 +4,22 @@
 #include "uart.h"
 
 #include "Keyboard.h"
+#include "Terminal.h"
 
 using namespace std;
 
 Keyboard::DeadKey Keyboard::dead_key;
 
+const string
+Keyboard::Debug::operator()(Keyboard* keyboard) const
+{
+  keyboard->terminal()->debug();
+  return "";
+}
+
 Keyboard::Keyboard()
-  : _error(false)
+  : _error(false),
+    _terminal(nullptr)
 {
 #include "keymap.inc"
 }
@@ -29,7 +38,7 @@ Keyboard::key_pressed(unsigned char modifiers,
       handler = definition->_shift;
     }
 
-    auto str = (*handler)();
+    auto str = (*handler)(this);
     if (str.length()) {
       uart_write(str.c_str(), str.length());
     }

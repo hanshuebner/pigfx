@@ -8,6 +8,8 @@
 #include <lru/lru.hpp>
 #pragma GCC diagnostic pop
 
+#include <iostream>
+
 #include <vterm.h>
 
 using namespace std;
@@ -55,6 +57,8 @@ public:
   unsigned int height() const { return _height; }
   unsigned int font_width() const { return _font_width; }
   unsigned int font_height() const { return _font_height; }
+
+  void get_debug_info(ostream &os) const;
 
 private:
   unsigned int _width;

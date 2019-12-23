@@ -1,5 +1,4 @@
-#ifndef _RASPI_HW_CONFIG_H_
-#define _RASPI_HW_CONFIG_H_
+#pragma once
 
 typedef enum
 {
@@ -27,9 +26,5 @@ typedef enum
   RHW_POWER_OFF
 } RHW_POWER_STATE;
 
-RHW_RETURN_TYPE
-rhw_get_mac_address(unsigned char* pOutAddr);
-RHW_RETURN_TYPE
-rhw_set_device_power(RHW_DEVICE dev, RHW_POWER_STATE state);
-
-#endif
+RHW_RETURN_TYPE rhw_get_mac_address(unsigned char* pOutAddr);
+RHW_RETURN_TYPE rhw_set_device_power(RHW_DEVICE dev, RHW_POWER_STATE state);

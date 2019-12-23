@@ -1,3 +1,4 @@
+#include <cstring>
 #include <sstream>
 
 #include "Terminal.h"
@@ -39,6 +40,8 @@ Terminal::Terminal(shared_ptr<Framebuffer> framebuffer,
   vterm_screen_set_callbacks(_screen, &_callbacks, this);
   vterm_screen_enable_altscreen(_screen, 1);
   vterm_screen_reset(_screen, 1);
+
+  _keyboard->attach(this);
 }
 
 int
@@ -83,6 +86,16 @@ Terminal::moverect(VTermRect dest, VTermRect src)
 void
 Terminal::output(const char* const s, unsigned length)
 {
-  vterm_input_write(_term, s, length);
+  vterm_input_write(_term, s, length ? length : strlen(s));
   _framebuffer->touch();
+}
+
+void
+Terminal::debug()
+{
+  ostringstream os;
+
+  _framebuffer->get_debug_info(os);
+
+  output(os.str().c_str());
 }

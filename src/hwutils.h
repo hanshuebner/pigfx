@@ -1,5 +1,4 @@
-#ifndef _PIGFX_HWUTILS_H_
-#define _PIGFX_HWUTILS_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,4 +53,3 @@ extern void word2hexstr(unsigned int word, char* outstr);
 };
 #endif
 
-#endif

@@ -9,7 +9,7 @@ DEPFLAGS = -MT $@ -MMD -MP -MF $@.d
 ## asm must be the first module
 MODULES = asm uart irq hwutils timer fb postman console dma	\
 	uspios_wrapper raspihwconfig stupid_timer binary_assets	\
-	syscall_stubs Framebuffer Terminal Keyboard pigfx
+	syscall_stubs Framebuffer Terminal Keyboard pivt
 
 BUILD_DIR = build
 SRC_DIR = src
@@ -20,29 +20,25 @@ OBJS=$(patsubst %,$(BUILD_DIR)/%.o,$(MODULES))
 LIBUSPI=uspi/lib/libuspi.a
 LIBVTERM=$(BUILD_DIR)/libvterm.a
 
-all: pigfx.elf pigfx.hex kernel
+all: pivt.elf pivt.hex kernel
 	ctags src/
-
-$(SRC_DIR)/pigfx_config.h: pigfx_config.h.in 
-	@echo "Creating pigfx_config.h"
-	@sed 's/\$$VERSION\$$/$(BUILD_VERSION)/g' pigfx_config.h.in > $(SRC_DIR)/pigfx_config.h
 
 $(SRC_DIR)/keymap.inc: keymap.txt
 	@echo "Creating keymap"
 	@perl make-keymap.pl < $< > $@
 
-run: pigfx.elf
+run: pivt.elf
 	./launch_qemu.bash
 
-kernel: pigfx.img
-	cp pigfx.img bin/kernel.img
+kernel: pivt.img
+	cp pivt.img bin/kernel.img
 
-debug: pigfx.elf
+debug: pivt.elf
 	cd JTAG && ./run_gdb.sh
 
-dump: pigfx.elf
+dump: pivt.elf
 	@echo "OBJDUMP $<"
-	@$(ARMGNU)-objdump --disassemble-zeroes -D pigfx.elf > pigfx.dump
+	@$(ARMGNU)-objdump --disassemble-zeroes -D pivt.elf > pivt.dump
 
 $(BUILD_DIR)/%.o : $(SRC_DIR)/%.c
 	@echo "CC $<"
@@ -79,17 +75,16 @@ $(LIBUSPI):
 	@echo "OBJCOPY $< -> $@"
 	@$(ARMGNU)-objcopy $< -O binary $@
 
-pigfx.elf : $(SRC_DIR)/pigfx_config.h $(OBJS) $(LIBVTERM) $(LIBUSPI)
+pivt.elf : $(OBJS) $(LIBVTERM) $(LIBUSPI)
 	@echo "LD $@"
 	@$(ARMGNU)-c++ -nostartfiles $(OBJS) $(LIBUSPI) $(LIBVTERM) -T memmap -o $@
 
 install: kernel
-	cp bin/kernel.img /Volumes/PIGFX/
-	diskutil umountdisk PIGFX
+	cp bin/kernel.img /Volumes/PIVT/
+	diskutil umountdisk PIVT
 
 clean:
 	cd uspi/lib && make clean
-	rm -f $(SRC_DIR)/pigfx_config.h
 	rm -f $(BUILD_DIR)/*
 	rm -f *.hex
 	rm -f *.elf

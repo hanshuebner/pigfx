@@ -1,5 +1,4 @@
-#ifndef _DMA_H_
-#define _DMA_H_
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +30,4 @@ int dma_running();
 
 #ifdef __cplusplus
 };
-#endif
-
 #endif
