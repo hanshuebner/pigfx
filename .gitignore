@@ -2,7 +2,6 @@
 *.swp
 .ctags
 sourceme.bash
-build/
 src/keymap.inc
 pivt.elf
 pivt.img
