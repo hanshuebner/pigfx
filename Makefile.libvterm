@@ -1,0 +1,11 @@
+# -*- Makefile -*-
+
+include ../../circle-stdlib/Config.mk
+CIRCLEHOME = ../../circle-stdlib/libs/circle
+
+LIBVTERM=../../build/libvterm.a
+
+$(LIBVTERM): $(LIBVTERM)($(patsubst %.c,%.o,$(wildcard *.c)))
+
+include $(CIRCLEHOME)/Rules.mk
+CFLAGS += -I ../include

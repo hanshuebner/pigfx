@@ -21,13 +21,13 @@ term_moverect(VTermRect dest, VTermRect src, void* terminal)
   return reinterpret_cast<Terminal*>(terminal)->moverect(dest, src);
 }
 
-Terminal::Terminal(shared_ptr<Framebuffer> framebuffer,
-                   shared_ptr<Keyboard> keyboard)
-  : _framebuffer(framebuffer),
-    _keyboard(keyboard)
+Terminal::Terminal()
 {
-  unsigned rows = framebuffer->height() / framebuffer->font_height();
-  unsigned columns = framebuffer->width() / framebuffer->font_width();
+  _framebuffer = make_shared<Framebuffer>();
+  _keyboard = make_shared<Keyboard>();
+
+  unsigned rows = _framebuffer->height() / _framebuffer->font_height();
+  unsigned columns = _framebuffer->width() / _framebuffer->font_width();
 
   _term = vterm_new(rows, columns);
 
@@ -92,14 +92,16 @@ Terminal::output(const char* const s, unsigned length)
 }
 
 void
+Terminal::uart_write(const string& s)
+{
+}
+
+void
 Terminal::debug()
 {
   ostringstream os;
 
   os << "\r\n";
-
-  extern unsigned uart_irq_count;
-  os << "UART IRQ count: " << uart_irq_count << "\r\n";
 
   _framebuffer->get_debug_info(os);
 

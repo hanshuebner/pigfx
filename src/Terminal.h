@@ -14,8 +14,7 @@ using namespace std;
 class Terminal
 {
  public:
-  Terminal(shared_ptr<Framebuffer> framebuffer,
-           shared_ptr<Keyboard> keyboard);
+  Terminal();
 
   void output(const char* const string, unsigned int length = 0);
 

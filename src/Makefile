@@ -7,7 +7,7 @@ include ../circle-stdlib/Config.mk
 CIRCLEHOME = ../circle-stdlib/libs/circle
 NEWLIBDIR = ../circle-stdlib/install/$(NEWLIB_ARCH)
 
-OBJS	= Terminal.o Framebuffer.o Keyboard.o
+OBJS	= Terminal.o Framebuffer.o Keyboard.o pivt.o
 
 include $(CIRCLEHOME)/Rules.mk
 
@@ -22,4 +22,5 @@ LIBS := "$(NEWLIBDIR)/lib/libm.a" "$(NEWLIBDIR)/lib/libc.a" "$(NEWLIBDIR)/lib/li
 	$(CIRCLEHOME)/lib/fs/libfs.a \
 	$(CIRCLEHOME)/lib/net/libnet.a \
 	$(CIRCLEHOME)/lib/sched/libsched.a \
-	$(CIRCLEHOME)/lib/libcircle.a
+	$(CIRCLEHOME)/lib/libcircle.a \
+	../build/libvterm.a
