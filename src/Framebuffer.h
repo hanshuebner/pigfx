@@ -8,6 +8,9 @@
 #include <lru/lru.hpp>
 #pragma GCC diagnostic pop
 
+#include <circle/dmachannel.h>
+#include <circle/bcmframebuffer.h>
+
 #include <iostream>
 
 #include <vterm.h>
@@ -19,7 +22,8 @@ using GFX_COL = unsigned char;
 class Framebuffer
 {
 public:
-  Framebuffer();
+  Framebuffer(unsigned int width = 800,
+              unsigned int height = 600);
 
   void clear(GFX_COL background_color);
 
@@ -61,15 +65,14 @@ public:
   void get_debug_info(ostream &os) const;
 
 private:
+  CDMAChannel _channel;
+  CTimer* _timer;
+  CBcmFrameBuffer* _framebuffer;
+
+  unsigned char* _pfb;
   unsigned int _width;
   unsigned int _height;
   unsigned int _pitch;
-  unsigned int _size;
-  unsigned char* _pfb;
-
-  unsigned char* _full_pfb;
-  unsigned int _full_size;
-  unsigned int _full_height;
 
   int _font_height;
   int _font_width;
@@ -82,6 +85,8 @@ private:
   unsigned char _cursor_buffer[10 * 20];
   bool _cursor_blink_state;
   unsigned int _last_activity;
+
+  void set_xterm_colors();
 
   void save_cursor_content(unsigned int row,
                            unsigned int column);

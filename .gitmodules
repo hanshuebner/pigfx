@@ -4,6 +4,6 @@
 [submodule "lru-cache"]
 	path = lru-cache
 	url = git@github.com:goldsborough/lru-cache.git
-[submodule "circle"]
-	path = circle
-	url = git@github.com:rsta2/circle.git
+[submodule "circle-stdlib"]
+	path = circle-stdlib
+	url = https://github.com/smuehlst/circle-stdlib

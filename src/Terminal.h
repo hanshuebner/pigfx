@@ -4,6 +4,8 @@
 
 #include <vterm.h>
 
+#include <circle/timer.h>
+
 #include "Framebuffer.h"
 #include "Keyboard.h"
 
@@ -22,6 +24,8 @@ class Terminal
   int damage(VTermRect rect);
   int movecursor(VTermPos position, __unused VTermPos oldPosition, int visible);
   int moverect(VTermRect dest, VTermRect src);
+
+  void uart_write(const string& s);
 
  private:
   shared_ptr<Framebuffer> _framebuffer;

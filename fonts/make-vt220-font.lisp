@@ -8,15 +8,15 @@
 ;; Please see https://vt100.net/dec/vt220/glyphs for a description of
 ;; how the VT220 font needs to be rendered to pixels.
 
-(defun convert-font (&key (input-filename "vt220-raw.png") (output-filename "font10x20.bin"))
+(defun convert-font (&key (input-filename "vt220-raw.png") (output-filename "../src/font.inc"))
   (with-open-file (output output-filename
                           :direction :output
                           :if-does-not-exist :create
-                          :if-exists :supersede
-                          :element-type '(unsigned-byte 8))
+                          :if-exists :supersede)
     (with-image-from-file* (input-filename)
       (dotimes (i 256)
         (format t "~A~%" i)
+        (format output "/* ~A */~%" i)
         (let* ((i (case i
                     (0 0)
                     (32 0)
@@ -28,7 +28,7 @@
                        (zerop (get-pixel (+ src-x cx) (+ src-y cy))))
                      (write-pixel (setp)
                        (format t "~A " (if setp "*" "."))
-                       (write-byte (if setp 255 0) output))
+                       (format output "0x~2,'0X, " (if setp 255 0)))
                      (make-row ()
                        (format t "[")
                        (dotimes (x 8)
@@ -37,6 +37,7 @@
                                                (pixel-at-p (1- x) y)))))
                        (dotimes (x 2)
                          (write-pixel (pixel-at-p 7 y)))
+                       (terpri output)
                        (format t "]~%")))
               (make-row)
               (make-row))))))))

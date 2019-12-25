@@ -69,6 +69,7 @@ Terminal::movecursor(VTermPos position, __unused VTermPos oldPosition, int visib
 int
 Terminal::moverect(VTermRect dest, VTermRect src)
 {
+  return 0;
   if (src.start_row < dest.start_row
       || src.start_col < dest.start_col) {
     // scroll down or right, not implemented yet.

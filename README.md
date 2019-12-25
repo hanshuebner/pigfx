@@ -5,9 +5,10 @@
 This project started off as a fork of https://github.com/scott5/pigfx
 with the intent to carry over bug fixes from Filippo Bergamasco's
 original version and make it emulate a Digital Equipment VT220
-terminal.  In the process, all of the original terminal emulation code
-has been removed and replaced by https://github.com/neovim/libvterm.
-All new code has been written in C++.
+terminal.  In the process, all of the code from pigfx has been removed
+and the system was rewritten in C++ using
+[libvterm](https://github.com/neovim/libvterm) and
+[circle](https://github.com/smuehlst/circle-stdlib).
 
 This emulator tries to faithfully render the VT220 font which requires
 10 by 20 pixels for each character.  See
@@ -18,7 +19,6 @@ works.
 
 The MIT License (MIT)
 
-Copyright (c) 2016 Filippo Bergamasco.
 Copyright (c) 2019, 2020 Hans Hübner
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

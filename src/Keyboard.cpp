@@ -1,8 +1,6 @@
 
 #include <cstring>
 
-#include "uart.h"
-
 #include "Keyboard.h"
 #include "Terminal.h"
 
@@ -40,7 +38,7 @@ Keyboard::key_pressed(unsigned char modifiers,
 
     auto str = (*handler)(this);
     if (str.length()) {
-      uart_write(str.c_str(), str.length());
+      _terminal->uart_write(str);
     }
   }
 }
