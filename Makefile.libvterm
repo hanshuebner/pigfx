@@ -6,6 +6,7 @@ CIRCLEHOME = ../../circle-stdlib/libs/circle
 LIBVTERM=../../build/libvterm.a
 
 $(LIBVTERM): encoding/DECdrawing.inc encoding/uk.inc $(LIBVTERM)($(patsubst %.c,%.o,$(wildcard *.c)))
+	rm -f encoding/DECdrawing.inc encoding/uk.inc
 
 encoding/%.inc: encoding/%.tbl
 	@echo TBL $<

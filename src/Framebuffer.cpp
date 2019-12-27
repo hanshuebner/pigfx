@@ -112,8 +112,6 @@ Framebuffer::Framebuffer(unsigned int width,
     log(LogError, "Framebuffer initialization failed");
   }
 
-  log(LogDebug, "Framebuffer initialized");
-
   unsigned int lines = height / _font_height;
   unsigned border_top_bottom = (height - (lines * _font_height)) / 2;
 
@@ -320,8 +318,6 @@ Framebuffer::handle_cursor()
   const bool blink_state = ((_timer->GetTicks() - _last_activity) % blink_period) < (blink_period / 2);
 
   if (_cursor_blink_state != blink_state) {
-    log(LogDebug, "Invert cursor");
-
     unsigned char* pb = _cursor_buffer;
     unsigned char* pfb = fb_pointer(_cursor_column * _font_width,
                                     _cursor_row * _font_height);
