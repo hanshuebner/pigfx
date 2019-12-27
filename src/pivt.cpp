@@ -61,18 +61,11 @@ PiVT::PiVT()
 PiVT::ShutdownMode
 PiVT::run()
 {
-  Framebuffer framebuffer;
-  for (int i = 0; i < 16; i++) {
-    for (int j = 0; j < 16; j++) {
-      VTermColor bg;
-      vterm_color_indexed(&bg, 0);
-      VTermColor fg;
-      vterm_color_indexed(&fg, i * 16 + j);
-      framebuffer.putc(i, j, 'H', fg, bg, VTermScreenCellAttrs());
-    }
-  }
+  Terminal terminal(&_serial_device);
+
+  log(LogDebug, "PiVT initialized, running");
   while (1) {
-    framebuffer.handle_cursor();
+    terminal.process();
   }
 }
 

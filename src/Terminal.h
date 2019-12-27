@@ -12,14 +12,12 @@
 
 using namespace std;
 
+class CSerialDevice;
+
 class Terminal
 {
  public:
-  Terminal();
-
-  void output(const char* const string, unsigned int length = 0);
-
-  void debug();
+  Terminal(CSerialDevice* serial_port);
 
   int damage(VTermRect rect);
   int movecursor(VTermPos position, __unused VTermPos oldPosition, int visible);
@@ -27,9 +25,13 @@ class Terminal
 
   void uart_write(const string& s);
 
+  void process();
+
  private:
   shared_ptr<Framebuffer> _framebuffer;
   shared_ptr<Keyboard> _keyboard;
+
+  CSerialDevice *_serial_port;
 
   VTerm* _term;
   VTermScreen* _screen;
@@ -46,4 +48,3 @@ class Terminal
 
   UnicodeMap _unicode_map;
 };
-

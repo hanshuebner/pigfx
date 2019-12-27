@@ -8,13 +8,6 @@ using namespace std;
 
 Keyboard::DeadKey Keyboard::dead_key;
 
-const string
-Keyboard::Debug::operator()(Keyboard* keyboard) const
-{
-  keyboard->terminal()->debug();
-  return "";
-}
-
 Keyboard::Keyboard()
   : _error(false),
     _terminal(nullptr)

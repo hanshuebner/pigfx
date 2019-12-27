@@ -62,8 +62,6 @@ public:
   unsigned int font_width() const { return _font_width; }
   unsigned int font_height() const { return _font_height; }
 
-  void get_debug_info(ostream &os) const;
-
 private:
   CDMAChannel _channel;
   CTimer* _timer;

@@ -24,3 +24,9 @@ LIBS := "$(NEWLIBDIR)/lib/libm.a" "$(NEWLIBDIR)/lib/libc.a" "$(NEWLIBDIR)/lib/li
 	$(CIRCLEHOME)/lib/sched/libsched.a \
 	$(CIRCLEHOME)/lib/libcircle.a \
 	../build/libvterm.a
+
+Keyboard.o: keymap.inc
+
+keymap.inc: ../tools/keymap.txt
+	@echo "Creating keymap"
+	@perl ../tools/make-keymap.pl < $< > $@

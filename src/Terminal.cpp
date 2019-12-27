@@ -1,6 +1,8 @@
 #include <cstring>
 #include <sstream>
 
+#include <circle/serial.h>
+
 #include "Terminal.h"
 
 static int
@@ -21,7 +23,8 @@ term_moverect(VTermRect dest, VTermRect src, void* terminal)
   return reinterpret_cast<Terminal*>(terminal)->moverect(dest, src);
 }
 
-Terminal::Terminal()
+Terminal::Terminal(CSerialDevice* serial_port)
+  : _serial_port(serial_port)
 {
   _framebuffer = make_shared<Framebuffer>();
   _keyboard = make_shared<Keyboard>();
@@ -89,27 +92,9 @@ Terminal::moverect(VTermRect dest, VTermRect src)
 }
 
 void
-Terminal::output(const char* const s, unsigned length)
-{
-  vterm_input_write(_term, s, length ? length : strlen(s));
-  _framebuffer->touch();
-}
-
-void
 Terminal::uart_write(const string& s)
 {
-}
-
-void
-Terminal::debug()
-{
-  ostringstream os;
-
-  os << "\r\n";
-
-  _framebuffer->get_debug_info(os);
-
-  output(os.str().c_str());
+  _serial_port->Write(s.c_str(), s.length());
 }
 
 Terminal::UnicodeMap::UnicodeMap()
@@ -146,4 +131,17 @@ Terminal::UnicodeMap::UnicodeMap()
   _map[0x2260] = 0x1d; // NOT EQUAL TO
   _map[0x00A3] = 0x1e; // POUND SIGN
   _map[0x00B7] = 0x1f; // MIDDLE DOT
+}
+
+void
+Terminal::process()
+{
+  char buf[1024];
+  unsigned serial_bytes_available = _serial_port->Read(buf, sizeof buf);
+  if (serial_bytes_available) {
+    vterm_input_write(_term, buf, serial_bytes_available);
+    _framebuffer->touch();
+  }
+
+  _framebuffer->handle_cursor();
 }
