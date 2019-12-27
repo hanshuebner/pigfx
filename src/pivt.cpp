@@ -61,19 +61,18 @@ PiVT::PiVT()
 PiVT::ShutdownMode
 PiVT::run()
 {
-  _act_led.Blink(3);
   Framebuffer framebuffer;
-  _act_led.Blink(1);
-  for (int i = 0; i < 30; i++) {
-    VTermColor bg;
-    vterm_color_indexed(&bg, 0);
-    VTermColor fg;
-    vterm_color_indexed(&fg, i);
-    framebuffer.putc(i, i, 'H', fg, bg, VTermScreenCellAttrs());
-    framebuffer.flush();
+  for (int i = 0; i < 16; i++) {
+    for (int j = 0; j < 16; j++) {
+      VTermColor bg;
+      vterm_color_indexed(&bg, 0);
+      VTermColor fg;
+      vterm_color_indexed(&fg, i * 16 + j);
+      framebuffer.putc(i, j, 'H', fg, bg, VTermScreenCellAttrs());
+    }
   }
   while (1) {
-    _act_led.Blink(1);
+    framebuffer.handle_cursor();
   }
 }
 

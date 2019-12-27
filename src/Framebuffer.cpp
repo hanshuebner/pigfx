@@ -87,7 +87,7 @@ Framebuffer::set_xterm_colors()
   };
 
   for (int i = 0; i < 256; i++) {
-    _framebuffer->SetPalette32(i, xterm_colors[i]);
+    _framebuffer->SetPalette32(i, ((xterm_colors[i] & 0xff0000) >> 16) | (xterm_colors[i] & 0x00ff00) | ((xterm_colors[i] & 0x0000ff) << 16));
   }
 
   _framebuffer->UpdatePalette();
@@ -130,19 +130,6 @@ Framebuffer::Framebuffer(unsigned int width,
   _glyph_cache.monitor();
 
   set_xterm_colors();
-
-  for (int i = 0; i < 4; i++) {
-    CActLED led;
-    memset((void *)_framebuffer->GetBuffer(), i, _width * _height);
-    led.Blink(1);
-    log(LogDebug, "Colored %d", i);
-  }
-
-  for (unsigned int y = 0; y < 256; y++) {
-    for (unsigned int x = 0; x < _width; x++) {
-      _pfb[y * _pitch + x] = y;
-    }
-  }
 }
 
 void
@@ -305,6 +292,7 @@ Framebuffer::putc(const unsigned row,
                           glyph->_width,
                           _font_height,
                           _pitch - glyph->_width);
+  flush();
 }
 
 void
@@ -328,10 +316,12 @@ Framebuffer::touch()
 void
 Framebuffer::handle_cursor()
 {
-  const unsigned blink_period = cursor_blink_freq * 1000000;
+  const unsigned blink_period = cursor_blink_freq * 100;
   const bool blink_state = ((_timer->GetTicks() - _last_activity) % blink_period) < (blink_period / 2);
 
   if (_cursor_blink_state != blink_state) {
+    log(LogDebug, "Invert cursor");
+
     unsigned char* pb = _cursor_buffer;
     unsigned char* pfb = fb_pointer(_cursor_column * _font_width,
                                     _cursor_row * _font_height);
