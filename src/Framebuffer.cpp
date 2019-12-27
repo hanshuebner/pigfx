@@ -5,11 +5,15 @@
 #include <memory>
 #include <map>
 
+#include <circle/actled.h>
 #include <circle/timer.h>
+#include <circle/logger.h>
 
 #include "Framebuffer.h"
 
 using namespace std;
+
+extern void log(TLogSeverity severity, const char* fmt, ...);
 
 unsigned char G_FONT_GLYPHS[] = {
 #include "font.inc"
@@ -85,6 +89,8 @@ Framebuffer::set_xterm_colors()
   for (int i = 0; i < 256; i++) {
     _framebuffer->SetPalette32(i, xterm_colors[i]);
   }
+
+  _framebuffer->UpdatePalette();
 }
 
 Framebuffer::Framebuffer(unsigned int width,
@@ -102,19 +108,41 @@ Framebuffer::Framebuffer(unsigned int width,
   _last_activity = _timer->GetTicks();
 
   _framebuffer = new CBcmFrameBuffer(width, height, 8);
-  _framebuffer->Initialize();
+  if (!_framebuffer->Initialize()) {
+    log(LogError, "Framebuffer initialization failed");
+  }
 
-  _timer->MsDelay(10);
+  log(LogDebug, "Framebuffer initialized");
 
   unsigned int lines = height / _font_height;
   unsigned border_top_bottom = (height - (lines * _font_height)) / 2;
 
-  _pfb = reinterpret_cast<unsigned char*>(_framebuffer->GetBuffer() + (border_top_bottom * _pitch));
   _width = width;
   _height = height - (border_top_bottom * 2);
   _pitch = _framebuffer->GetPitch();
 
+  log(LogDebug,
+      "Framebuffer initialized, _width=%u _height=%u lines=%u border_top_bottom=%u _pitch=%u",
+      _width, _height, lines, border_top_bottom, _pitch);
+
+  _pfb = reinterpret_cast<unsigned char*>(_framebuffer->GetBuffer() + (border_top_bottom * _pitch));
+
   _glyph_cache.monitor();
+
+  set_xterm_colors();
+
+  for (int i = 0; i < 4; i++) {
+    CActLED led;
+    memset((void *)_framebuffer->GetBuffer(), i, _width * _height);
+    led.Blink(1);
+    log(LogDebug, "Colored %d", i);
+  }
+
+  for (unsigned int y = 0; y < 256; y++) {
+    for (unsigned int x = 0; x < _width; x++) {
+      _pfb[y * _pitch + x] = y;
+    }
+  }
 }
 
 void

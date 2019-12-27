@@ -5,7 +5,11 @@ CIRCLEHOME = ../../circle-stdlib/libs/circle
 
 LIBVTERM=../../build/libvterm.a
 
-$(LIBVTERM): $(LIBVTERM)($(patsubst %.c,%.o,$(wildcard *.c)))
+$(LIBVTERM): encoding/DECdrawing.inc encoding/uk.inc $(LIBVTERM)($(patsubst %.c,%.o,$(wildcard *.c)))
+
+encoding/%.inc: encoding/%.tbl
+	@echo TBL $<
+	@perl -CSD ../tbl2inc_c.pl $< >$@
 
 include $(CIRCLEHOME)/Rules.mk
 CFLAGS += -I ../include

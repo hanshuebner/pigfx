@@ -28,5 +28,17 @@ Implement underline and frieds
 
 ## Character sets
 
-It seems that graphics characters are indicated by another character
-set in the cell attributes.
+Characters are reported as Unicode code points to in VTermScreenCell.
+The line drawing characters must be mapped back to character code
+points in the VT220 character set.
+
+## Device reports
+
+libvterm has hard-coded device reports in state.c (case 0x63:).  It
+may make sense to replace those using a patch or a fork of libvterm so
+that the terminal reports to be a VT220 instead of a VT100.
+
+xterm can report its window size
+(https://www.xfree86.org/current/ctlseqs.html, "Window
+manipulation").  This could be a useful extension to allow setting of
+the terminal size when it is not 80x24.

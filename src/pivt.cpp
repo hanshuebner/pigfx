@@ -1,75 +1,88 @@
 
 #include <cstring>
 
+
+#include <iostream>
+
 #include <circle/startup.h>
 
 #include "pivt.h"
 
 using namespace std;
 
+CLogger* logger = nullptr;
+
 extern "C" void
-LogWrite(__unused const char* pSource, __unused unsigned Severity, __unused const char* fmt, ...)
+LogWrite(const char* source, unsigned severity, const char* fmt, ...)
 {
+  if (logger) {
+    va_list vl;
+    va_start(vl, fmt);
+    logger->WriteV(source, (TLogSeverity) severity, fmt, vl);
+    va_end(vl);
+  }
+}
+
+void
+log(TLogSeverity severity, const char* fmt, ...)
+{
+  if (logger) {
+    va_list vl;
+    va_start(vl, fmt);
+    logger->WriteV("PiVT", (TLogSeverity) severity, fmt, vl);
+    va_end(vl);
+  }
 }
 
 PiVT* PiVT::_this = nullptr;
 
 PiVT::PiVT()
-  : _terminal(new Terminal()),
-    _timer(&_interrupt),
-    _logger(_options.GetLogLevel(), &_timer),
-    _usb_hci(&_interrupt, &_timer)
+  : _timer(&_interrupt),
+    _logger(LogDebug, &_timer)
 {
+  _act_led.Blink(1);
+
+  _interrupt.Initialize();
+  _serial_device.Initialize(38400);
+  _logger.Initialize(&_serial_device);
+  _timer.Initialize();
+
+  //  _terminal = new Terminal();
+
+  _act_led.Blink(1);
+
+  logger = &_logger;
+
+  log(LogNotice, "PiVT starting");
+
   _this = this;
 }
 
-void
-PiVT::initialize()
-{
-  _act_led.Blink(2);
-  _serial.Initialize(38400);
-
-  CDevice *target = _device_name_service.GetDevice(_options.GetLogDevice(), FALSE);
-  target = &_serial;
-  _logger.Initialize(target);
-
-  _interrupt.Initialize();
-  _timer.Initialize();
-  _usb_hci.Initialize();
-  _act_led.Blink(2);
-}
-
-void
+PiVT::ShutdownMode
 PiVT::run()
 {
+  _act_led.Blink(3);
+  Framebuffer framebuffer;
+  _act_led.Blink(1);
+  for (int i = 0; i < 30; i++) {
+    VTermColor bg;
+    vterm_color_indexed(&bg, 0);
+    VTermColor fg;
+    vterm_color_indexed(&fg, i);
+    framebuffer.putc(i, i, 'H', fg, bg, VTermScreenCellAttrs());
+    framebuffer.flush();
+  }
   while (1) {
+    _act_led.Blink(1);
   }
 }
 
-extern "C" int
-main()
+int
+main(void)
 {
-#if 0
   PiVT pivt;
-  pivt.initialize();
-  pivt.run();
-#else
-  CMemorySystem memory;
-  CActLED act_led;
-  CSerialDevice serial;
-  CExceptionHandler exception_handler;
-  CInterruptSystem interrupt;
-  CTimer timer(&interrupt);
-  CLogger logger(LogDebug);
 
-  act_led.Blink(5);
-  serial.Initialize(38400);
-  // logger.Initialize(&serial);
-  // interrupt.Initialize();
-  act_led.Blink(5);
-  const char* message = "Hello world!\r\n";
-  serial.Write(message, strlen(message));
-#endif
-  
+  pivt.run();
+
   return EXIT_HALT;
 }

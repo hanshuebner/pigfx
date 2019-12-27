@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <circle_stdlib_app.h>
+
 #include <circle/memory.h>
 #include <circle/actled.h>
 #include <circle/koptions.h>
@@ -20,24 +22,30 @@
 class PiVT
 {
 public:
+
+  enum ShutdownMode {
+    ShutdownNone,
+    ShutdownHalt,
+    ShutdownReboot
+  };
+
   PiVT();
 
   void initialize();
-  void run();
+  ShutdownMode run();
 
 private:
-  Terminal* _terminal;
-
-  CMemorySystem _memory;
   CActLED _act_led;
   CKernelOptions _options;
   CDeviceNameService _device_name_service;
-  CSerialDevice _serial;
+  CNullDevice _null_device;
+  CSerialDevice _serial_device;
   CExceptionHandler _exception_handler;
   CInterruptSystem _interrupt;
   CTimer _timer;
   CLogger _logger;
-  CUSBHCIDevice _usb_hci;
+
+  Terminal* _terminal;
 
   static PiVT* _this;
 };

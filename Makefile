@@ -10,6 +10,10 @@ clean:
 vterm:
 	cd libvterm/src && make -f ../../Makefile.libvterm
 
+install: all
+	cp src/kernel.img /Volumes/PIVT
+	diskutil umountdisk PIVT
+
 circle: circle-stdlib/Config.mk
 
 circle-stdlib/Config.mk:

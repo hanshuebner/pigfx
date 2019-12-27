@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <map>
 
 #include <vterm.h>
 
@@ -33,5 +34,16 @@ class Terminal
   VTerm* _term;
   VTermScreen* _screen;
   VTermScreenCallbacks _callbacks;
+
+  class UnicodeMap {
+  public:
+    UnicodeMap();
+
+    map<uint32_t, uint8_t> _map;
+
+    uint8_t to_dec_char(uint32_t code) { return _map.count(code) ? _map[code] : code; }
+  };
+
+  UnicodeMap _unicode_map;
 };
 
