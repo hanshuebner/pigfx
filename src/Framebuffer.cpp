@@ -7,13 +7,10 @@
 
 #include <circle/actled.h>
 #include <circle/timer.h>
-#include <circle/logger.h>
 
 #include "Framebuffer.h"
 
 using namespace std;
-
-extern void log(TLogSeverity severity, const char* fmt, ...);
 
 unsigned char G_FONT_GLYPHS[] = {
 #include "font.inc"
@@ -95,7 +92,8 @@ Framebuffer::set_xterm_colors()
 
 Framebuffer::Framebuffer(unsigned int width,
                          unsigned int height)
-  :  _channel(DMA_CHANNEL_NORMAL),
+  :  Logging("Framebuffer"),
+     _channel(DMA_CHANNEL_NORMAL),
      _timer(CTimer::Get()),
      _font_height(20),
      _font_width(10),
@@ -174,17 +172,20 @@ Framebuffer::move_rect(unsigned int from_row,
                        unsigned int columns,
                        __unused GFX_COL background_color)
 {
+  log(LogDebug, "Restore cursor content");
   restore_cursor_content(_cursor_row, _cursor_column);
   unsigned int width = columns * _font_width;
   unsigned int height = rows * _font_height;
-#if 0
-  dma_enqueue_operation(fb_pointer(from_column * _font_width, from_row * _font_height),
-                        fb_pointer(to_column * _font_width, to_row * _font_height),
-                        (((height - 1) & 0xFFFF) << 16) | (width & 0xFFFF),
-                        ((_pitch - width) & 0xFFFF) << 16 | (_pitch - width), /* bits 31:16 destination stride, 15:0 source stride */
-                        DMA_TI_SRC_INC | DMA_TI_DEST_INC | DMA_TI_2DMODE);
-#endif
+
+  log(LogDebug, "Move width %u height %u, setting up DMA", width, height);
+  _channel.SetupMemCopy2D(fb_pointer(from_column * _font_width, from_row * _font_height),
+                          fb_pointer(to_column * _font_width, to_row * _font_height),
+                          width, height,
+                          _pitch - width, _pitch - width,
+                          0);
+  log(LogDebug, "Starting DMA");
   flush();
+  log(LogDebug, "Save new cursor content");
   save_cursor_content(_cursor_row, _cursor_column);
 }
 

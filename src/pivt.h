@@ -13,13 +13,14 @@
 #include <circle/exceptionhandler.h>
 #include <circle/interrupt.h>
 #include <circle/timer.h>
-#include <circle/logger.h>
 #include <circle/usb/usbhcidevice.h>
 #include <circle/types.h>
 
+#include "Logging.h"
 #include "Terminal.h"
 
 class PiVT
+  : protected Logging
 {
 public:
 
@@ -44,6 +45,7 @@ private:
   CInterruptSystem _interrupt;
   CTimer _timer;
   CLogger _logger;
+  CUSBHCIDevice _usb_hci;
 
   Terminal* _terminal;
 

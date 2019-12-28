@@ -6,19 +6,19 @@
 #include <map>
 #include <string>
 
+#include "Logging.h"
+
 using namespace std;
 
 class Terminal;
+class CUSBKeyboardDevice;
 
 class Keyboard
+  : protected Logging
 {
 public:
-  Keyboard();
+  Keyboard(Terminal* terminal);
 
-  void handle_report(unsigned char modifiers,
-                     const unsigned char keys[6]);
-
-  void attach(Terminal* terminal) { _terminal = terminal; }
   Terminal* terminal() const { return _terminal; }
 
 private:
@@ -29,9 +29,20 @@ private:
   bool _error;
   map<unsigned char, KeyDefinition*> _map;
   Terminal* _terminal;
+  CUSBKeyboardDevice* _usb_keyboard;
+
+  static Keyboard* _this;
+
+  void initialize_keymap();
 
   void key_pressed(unsigned char modifiers,
                    unsigned char key_code);
+
+  void handle_report(unsigned char modifiers,
+                     const unsigned char keys[6]);
+
+  friend void handle_report_stub(unsigned char modifiers,
+                                 const unsigned char key_code[6]);
 
   enum Modifiers {
                   LeftControl = 1,

@@ -7,7 +7,7 @@ include ../circle-stdlib/Config.mk
 CIRCLEHOME = ../circle-stdlib/libs/circle
 NEWLIBDIR = ../circle-stdlib/install/$(NEWLIB_ARCH)
 
-OBJS	= pivt.o Terminal.o Framebuffer.o Keyboard.o
+OBJS	= pivt.o Terminal.o Framebuffer.o Keyboard.o Logging.o
 
 include $(CIRCLEHOME)/Rules.mk
 

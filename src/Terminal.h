@@ -1,3 +1,5 @@
+// -*- C++ -*-
+
 #pragma once
 
 #include <memory>
@@ -7,6 +9,7 @@
 
 #include <circle/timer.h>
 
+#include "Logging.h"
 #include "Framebuffer.h"
 #include "Keyboard.h"
 
@@ -15,6 +18,7 @@ using namespace std;
 class CSerialDevice;
 
 class Terminal
+  : protected Logging
 {
  public:
   Terminal(CSerialDevice* serial_port);

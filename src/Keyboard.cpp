@@ -1,18 +1,49 @@
 
 #include <cstring>
 
+#include <circle/devicenameservice.h>
+#include <circle/usb/usbkeyboard.h>
+
 #include "Keyboard.h"
 #include "Terminal.h"
 
 using namespace std;
 
+Keyboard* Keyboard::_this;
+
+void
+handle_report_stub(unsigned char modifiers,
+                   const unsigned char key_code[6])
+{
+  if (Keyboard::_this) {
+    Keyboard::_this->handle_report(modifiers, key_code);
+  }
+}
+
 Keyboard::DeadKey Keyboard::dead_key;
 
-Keyboard::Keyboard()
-  : _error(false),
-    _terminal(nullptr)
+void
+Keyboard::initialize_keymap()
 {
 #include "keymap.inc"
+}
+
+Keyboard::Keyboard(Terminal* terminal)
+  : Logging("Keyboard"),
+    _error(false),
+    _terminal(terminal)
+{
+  initialize_keymap();
+
+  _usb_keyboard = (CUSBKeyboardDevice *) CDeviceNameService::Get()->GetDevice("ukbd1", FALSE);
+
+  if (_usb_keyboard == 0) {
+    log(LogError, "No keyboard found");
+  } else {
+    _this = this;
+
+    _usb_keyboard->RegisterKeyStatusHandlerRaw(handle_report_stub);
+  }
 }
 
 void

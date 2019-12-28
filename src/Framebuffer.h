@@ -15,11 +15,14 @@
 
 #include <vterm.h>
 
+#include "Logging.h"
+
 using namespace std;
 
 using GFX_COL = unsigned char;
 
 class Framebuffer
+  : protected Logging
 {
 public:
   Framebuffer(unsigned int width = 800,

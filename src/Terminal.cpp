@@ -24,10 +24,11 @@ term_moverect(VTermRect dest, VTermRect src, void* terminal)
 }
 
 Terminal::Terminal(CSerialDevice* serial_port)
-  : _serial_port(serial_port)
+  : Logging("Terminal"),
+    _serial_port(serial_port)
 {
   _framebuffer = make_shared<Framebuffer>();
-  _keyboard = make_shared<Keyboard>();
+  _keyboard = make_shared<Keyboard>(this);
 
   unsigned rows = _framebuffer->height() / _framebuffer->font_height();
   unsigned columns = _framebuffer->width() / _framebuffer->font_width();
@@ -43,8 +44,6 @@ Terminal::Terminal(CSerialDevice* serial_port)
   vterm_screen_set_callbacks(_screen, &_callbacks, this);
   vterm_screen_enable_altscreen(_screen, 1);
   vterm_screen_reset(_screen, 1);
-
-  _keyboard->attach(this);
 }
 
 int
@@ -76,7 +75,10 @@ Terminal::movecursor(VTermPos position, __unused VTermPos oldPosition, int visib
 int
 Terminal::moverect(VTermRect dest, VTermRect src)
 {
-  return 0;
+  log(LogDebug, "moverect called %u/%u:%u/%u -> %u:%u/%u:%u",
+      src.start_row, src.start_col, src.end_row, src.end_col,
+      dest.start_row, dest.start_col, dest.end_row, dest.end_col);
+  
   if (src.start_row < dest.start_row
       || src.start_col < dest.start_col) {
     // scroll down or right, not implemented yet.
