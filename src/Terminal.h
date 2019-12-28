@@ -35,7 +35,7 @@ class Terminal
   shared_ptr<Framebuffer> _framebuffer;
   shared_ptr<Keyboard> _keyboard;
 
-  CSerialDevice *_serial_port;
+  CSerialDevice* _serial_port;
 
   VTerm* _term;
   VTermScreen* _screen;
