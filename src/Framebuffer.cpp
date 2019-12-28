@@ -261,7 +261,12 @@ Framebuffer::get_glyph(const unsigned char c,
                        const VTermScreenCellAttrs attributes)
 {
   shared_ptr<Glyph> glyph;
-  const auto key = GlyphKey(c, foreground_color, background_color, *reinterpret_cast<const unsigned long *>(&attributes));
+  union {
+    VTermScreenCellAttrs attrs;
+    uint16_t binary;
+  } cast_attributes;
+  cast_attributes.attrs = attributes;
+  const auto key = GlyphKey(c, foreground_color, background_color, cast_attributes.binary);
   if (_glyph_cache.contains(key)) {
     glyph = _glyph_cache.lookup(key);
   } else {
