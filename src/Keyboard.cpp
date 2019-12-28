@@ -1,11 +1,11 @@
 
+#include "Keyboard.h"
+#include "Terminal.h"
+
 #include <cstring>
 
 #include <circle/devicenameservice.h>
 #include <circle/usb/usbkeyboard.h>
-
-#include "Keyboard.h"
-#include "Terminal.h"
 
 using namespace std;
 

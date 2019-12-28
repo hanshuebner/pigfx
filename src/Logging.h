@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <cstdarg>
+
 #include <string>
 
 #include <circle/logger.h>
