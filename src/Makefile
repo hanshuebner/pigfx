@@ -11,8 +11,9 @@ OBJS	= pivt.o Terminal.o Framebuffer.o Keyboard.o Logging.o
 
 include $(CIRCLEHOME)/Rules.mk
 
+DEPFLAGS = -MT $@ -MMD -MP -MF $@.d
 CFLAGS += -I ../libvterm/include -I ../lru-cache/include
-CPPFLAGS += -std=c++17
+CPPFLAGS += -std=c++17 $(DEPFLAGS)
 CFLAGS += -I "$(NEWLIBDIR)/include" -I $(STDDEF_INCPATH) -I ../circle-stdlib/include
 LIBS := "$(NEWLIBDIR)/lib/libm.a" "$(NEWLIBDIR)/lib/libc.a" "$(NEWLIBDIR)/lib/libcirclenewlib.a" \
 	$(CIRCLEHOME)/addon/SDCard/libsdcard.a \
@@ -30,3 +31,5 @@ Keyboard.o: keymap.inc
 keymap.inc: ../tools/keymap.txt
 	@echo "Creating keymap"
 	@perl ../tools/make-keymap.pl < $< > $@
+
+include $(wildcard *.d)
