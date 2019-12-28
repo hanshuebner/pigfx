@@ -33,10 +33,13 @@ Terminal::Terminal(CSerialDevice* serial_port)
   unsigned rows = _framebuffer->height() / _framebuffer->font_height();
   unsigned columns = _framebuffer->width() / _framebuffer->font_width();
 
+  log(LogDebug, "Got %u rows %u columns", rows, columns);
+
   _term = vterm_new(rows, columns);
 
   _screen = vterm_obtain_screen(_term);
 
+  memset(&_callbacks, 0, sizeof _callbacks);
   _callbacks.damage = term_damage;
   _callbacks.movecursor = term_movecursor;
   _callbacks.moverect = term_moverect;
@@ -78,6 +81,7 @@ Terminal::moverect(VTermRect dest, VTermRect src)
   log(LogDebug, "moverect called %u/%u:%u/%u -> %u:%u/%u:%u",
       src.start_row, src.start_col, src.end_row, src.end_col,
       dest.start_row, dest.start_col, dest.end_row, dest.end_col);
+  return 0;
   
   if (src.start_row < dest.start_row
       || src.start_col < dest.start_col) {
@@ -139,10 +143,24 @@ void
 Terminal::process()
 {
   char buf[1024];
-  unsigned serial_bytes_available = _serial_port->Read(buf, sizeof buf);
-  if (serial_bytes_available) {
+  int serial_bytes_available = _serial_port->Read(buf, sizeof buf);
+  if (serial_bytes_available > 0) {
     vterm_input_write(_term, buf, serial_bytes_available);
     _framebuffer->touch();
+  } else if (serial_bytes_available < 0) {
+    switch (serial_bytes_available) {
+    case -SERIAL_ERROR_BREAK:
+      log(LogError, "Could not read from serial port (break)");
+      break;
+    case -SERIAL_ERROR_OVERRUN:
+      log(LogError, "Could not read from serial port (overrun)");
+      break;
+    case -SERIAL_ERROR_FRAMING:
+      log(LogError, "Could not read from serial port (framing error)");
+      break;
+    default:
+      log(LogError, "Could not read from serial port (unexpected return code %d)", serial_bytes_available);
+    }
   }
 
   _framebuffer->handle_cursor();
