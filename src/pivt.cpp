@@ -13,6 +13,7 @@ PiVT* PiVT::_this = nullptr;
 
 PiVT::PiVT()
   : Logging("PiVT"),
+    _serial_device(&_interrupt),
     _timer(&_interrupt),
     _logger(LogDebug, &_timer),
     _usb_hci(&_interrupt, &_timer)

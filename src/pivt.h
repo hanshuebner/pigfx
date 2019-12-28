@@ -40,9 +40,9 @@ private:
   CKernelOptions _options;
   CDeviceNameService _device_name_service;
   CNullDevice _null_device;
-  CSerialDevice _serial_device;
   CExceptionHandler _exception_handler;
   CInterruptSystem _interrupt;
+  CSerialDevice _serial_device;
   CTimer _timer;
   CLogger _logger;
   CUSBHCIDevice _usb_hci;
