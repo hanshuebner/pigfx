@@ -15,6 +15,21 @@ This emulator tries to faithfully render the VT220 font which requires
 https://vt100.net/dec/vt220/glyphs for a description of how that
 works.
 
+## Prerequisites
+
+Currently, this project has been tested on Raspberry Pi Zero (without
+WiFi).  It should work on other models as the hardware is accessed
+through the [circle](https://github.com/smuehlst/circle-stdlib)
+library.
+
+Depending on what you want your terminal to talk to, you may need an
+RS232 level converter connected to the Pi's serial port.
+
+## Installation
+
+Copy the files from the bin/ subdirectory to a SD card formatted with
+FAT32 and boot that in your Raspberry Pi.
+
 # License
 
 The MIT License (MIT)
