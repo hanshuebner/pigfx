@@ -22,6 +22,9 @@ WiFi).  It should work on other models as the hardware is accessed
 through the [circle](https://github.com/smuehlst/circle-stdlib)
 library.
 
+A standard USB keyboard needs to be connected to the Pi.  USB hubs are
+not currently supported.
+
 Depending on what you want your terminal to talk to, you may need an
 RS232 level converter connected to the Pi's serial port.
 
@@ -29,6 +32,12 @@ RS232 level converter connected to the Pi's serial port.
 
 Copy the files from the bin/ subdirectory to a SD card formatted with
 FAT32 and boot that in your Raspberry Pi.
+
+## Serial port configuration
+
+The serial port is configured to 8 data bits, one stop bit and no
+parity at 38400 bps.  The port speed can be changed using the SysReq
+key on the fly.
 
 # License
 
