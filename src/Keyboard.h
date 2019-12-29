@@ -103,10 +103,17 @@ private:
 
   static DeadKey dead_key;
 
-  class Debug
+  class ToggleScreenSize
     : public KeypressHandler
   {
   public:
-    virtual const string operator()(__unused Keyboard* keyboard) const;
+    virtual const string operator()(Keyboard* keyboard) const;
+  };
+
+  class CycleSerialSpeed
+    : public KeypressHandler
+  {
+  public:
+    virtual const string operator()(Keyboard* keyboard) const;
   };
 };

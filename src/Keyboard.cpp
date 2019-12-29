@@ -98,3 +98,17 @@ Keyboard::handle_report(unsigned char modifiers,
   }
   _keys_pressed = keys_pressed_now;
 }
+
+const string
+Keyboard::CycleSerialSpeed::operator()(Keyboard* keyboard) const
+{
+  keyboard->terminal()->cycle_serial_speed();
+  return "";
+}
+
+const string
+Keyboard::ToggleScreenSize::operator()(Keyboard* keyboard) const
+{
+  keyboard->terminal()->toggle_screen_size();
+  return "";
+}

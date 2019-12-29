@@ -28,6 +28,12 @@ class Terminal
   int moverect(VTermRect dest, VTermRect src);
 
   void uart_write(const string& s);
+  void uart_set_speed(unsigned speed);
+
+  void display_status(const string& s);
+
+  void cycle_serial_speed();
+  void toggle_screen_size();
 
   void process();
 
@@ -36,6 +42,7 @@ class Terminal
   shared_ptr<Keyboard> _keyboard;
 
   CSerialDevice* _serial_port;
+  unsigned _serial_speed;
 
   VTerm* _term;
   VTermScreen* _screen;

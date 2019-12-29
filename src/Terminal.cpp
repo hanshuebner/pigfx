@@ -1,7 +1,10 @@
 #include <cstring>
+
 #include <sstream>
+#include <vector>
 
 #include <circle/serial.h>
+#include <circle/devicenameservice.h>
 
 #include "Terminal.h"
 
@@ -25,7 +28,8 @@ term_moverect(VTermRect dest, VTermRect src, void* terminal)
 
 Terminal::Terminal(CSerialDevice* serial_port)
   : Logging("Terminal"),
-    _serial_port(serial_port)
+    _serial_port(serial_port),
+    _serial_speed(38400)
 {
   _framebuffer = make_shared<Framebuffer>();
   _keyboard = make_shared<Keyboard>(this);
@@ -47,6 +51,8 @@ Terminal::Terminal(CSerialDevice* serial_port)
   vterm_screen_set_callbacks(_screen, &_callbacks, this);
   vterm_screen_enable_altscreen(_screen, 1);
   vterm_screen_reset(_screen, 1);
+
+  uart_set_speed(_serial_speed);
 }
 
 int
@@ -101,6 +107,13 @@ void
 Terminal::uart_write(const string& s)
 {
   _serial_port->Write(s.c_str(), s.length());
+}
+
+void
+Terminal::uart_set_speed(unsigned speed)
+{
+  _serial_port->SetSpeed(speed);
+  _serial_speed = speed;
 }
 
 Terminal::UnicodeMap::UnicodeMap()
@@ -164,4 +177,40 @@ Terminal::process()
   }
 
   _framebuffer->handle_cursor();
+}
+
+void
+Terminal::display_status(const string& s)
+{
+  ostringstream os;
+  os << '\x1b' << "7" << '\x1b' << "[H[" << s << "]" << '\x1b' << "[K" << '\x1b' << "8";
+  auto status = os.str();
+  vterm_input_write(_term, status.c_str(), status.length());
+}
+
+void
+Terminal::cycle_serial_speed()
+{
+  static const vector<unsigned> speeds { 300, 600, 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 };
+
+  auto speed = speeds.begin();
+  for (; speed != speeds.end(); speed++) {
+    if (*speed == _serial_speed) {
+      speed++;
+      break;
+    }
+  }
+  if (speed == speeds.end()) {
+    speed = speeds.begin();
+  }
+  uart_set_speed(*speed);
+  ostringstream os;
+  os << "Serial speed set to " << *speed << " bps";
+  display_status(os.str());
+}
+
+void
+Terminal::toggle_screen_size()
+{
+  display_status("Not yet implemented");
 }
