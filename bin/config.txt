@@ -1,1 +1,3 @@
-init_uart_baud=115200
+init_uart_baud=38400
+dtoverlay=miniuart-bt
+enable_uart=1
