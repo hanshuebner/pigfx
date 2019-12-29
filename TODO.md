@@ -17,10 +17,6 @@ pixels but should otherwise be straightforward.
 
 ## Settings
 
-## Attributes
-
-Implement underline and frieds
-
 ## Device reports
 
 libvterm has hard-coded device reports in state.c (case 0x63:).  It
