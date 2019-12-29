@@ -20,7 +20,13 @@ PiVT::PiVT()
 {
   _interrupt.Initialize();
   _serial_device.Initialize(38400);
-  _logger.Initialize(&_serial_device);
+
+  CDevice* logTarget = _device_name_service.GetDevice(_options.GetLogDevice(), false);
+  if (logTarget == nullptr) {
+    logTarget = &_null_device;
+  }
+  _logger.Initialize(logTarget);
+
   _timer.Initialize();
   _usb_hci.Initialize();
 

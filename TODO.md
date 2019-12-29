@@ -6,13 +6,6 @@ This will propbably require tracking of the double width/height
 status for each line so that the right cursor save size can be
 saved and restored.  Reuse Glyph?
 
-## Fix UART IRQ handling
-
-It seems that currently, UART interrupts received during screen
-processing are not correctly processed.  Maybe interrupts are not
-processed at all?  Removing `uart_fill_queue` seems to be required,
-but why?
-
 ## Implement 132 columns mode
 
 This will require reinitialization of the framebuffer to 1400x1050
@@ -20,17 +13,13 @@ pixels but should otherwise be straightforward.
 
 ## Keyboard application mode
 
+## Keyboard autorepeat
+
 ## Settings
 
 ## Attributes
 
 Implement underline and frieds
-
-## Character sets
-
-Characters are reported as Unicode code points to in VTermScreenCell.
-The line drawing characters must be mapped back to character code
-points in the VT220 character set.
 
 ## Device reports
 
@@ -42,3 +31,10 @@ xterm can report its window size
 (https://www.xfree86.org/current/ctlseqs.html, "Window
 manipulation").  This could be a useful extension to allow setting of
 the terminal size when it is not 80x24.
+
+## Fix DMA scrolling
+
+## Flow control
+
+We want hardware and optional XON/XOFF flow control
+
