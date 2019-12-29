@@ -176,7 +176,7 @@ Terminal::process()
     }
   }
 
-  _framebuffer->handle_cursor();
+  _framebuffer->process();
 }
 
 void

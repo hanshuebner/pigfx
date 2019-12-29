@@ -125,7 +125,13 @@ Framebuffer::Framebuffer(unsigned int width,
 
   _glyph_cache.monitor();
 
-  set_xterm_colors();
+  _framebuffer->SetPalette32(0, 0x000000);
+  _framebuffer->SetPalette32(1, 0x808080);
+  _framebuffer->SetPalette32(2, 0xffffff);
+  _framebuffer->SetPalette32(3, 0x808080);
+  _framebuffer->SetPalette32(4, 0xffffff);
+
+  _framebuffer->UpdatePalette();
 }
 
 void
@@ -138,8 +144,8 @@ Framebuffer::save_cursor_content(unsigned int row,
   unsigned char* pfb = fb_pointer(column * _font_width,
                                   row * _font_height);
 
-  for (int y = 0; y < _font_height; y++) {
-    for (int x = 0; x < _font_width; x++) {
+  for (unsigned int y = 0; y < _font_height; y++) {
+    for (unsigned int x = 0; x < _font_width; x++) {
       *pb++ = pfb[x];
     }
     pfb += _pitch;
@@ -155,8 +161,8 @@ Framebuffer::restore_cursor_content(unsigned int row,
   unsigned char* pfb = fb_pointer(column * _font_width,
                                   row * _font_height);
 
-  for (int y = 0; y < _font_height; y++) {
-    for (int x = 0; x < _font_width; x++) {
+  for (unsigned int y = 0; y < _font_height; y++) {
+    for (unsigned int x = 0; x < _font_width; x++) {
       pfb[x] = *pb++;
     }
     pfb += _pitch;
@@ -197,12 +203,15 @@ Framebuffer::Glyph::Glyph(unsigned int width, unsigned int height)
 
 shared_ptr<Framebuffer::Glyph>
 Framebuffer::make_glyph(const unsigned char c,
-                        const GFX_COL _foreground_color,
-                        const GFX_COL _background_color,
+                        __unused const GFX_COL _foreground_color,
+                        __unused const GFX_COL _background_color,
                         const VTermScreenCellAttrs attributes)
 {
-  GFX_COL foreground_color = _foreground_color;
-  GFX_COL background_color = _background_color;
+  GFX_COL foreground_color = attributes.bold ? 2 : (attributes.conceal ? 0 : 1);
+  if (attributes.blink && !attributes.conceal) {
+    foreground_color += 2;
+  }
+  GFX_COL background_color = 0;
   if (attributes.reverse) {
     swap(foreground_color, background_color);
   }
@@ -211,22 +220,32 @@ Framebuffer::make_glyph(const unsigned char c,
   auto glyph = make_shared<Glyph>(_font_width * (attributes.dwl ? 2 : 1), _font_height);
   unsigned char* p = glyph->_data;
 
+  auto get_font_data = [=](unsigned x, unsigned y) {
+    if (attributes.underline && y == (_font_height - 1)) {
+      return foreground_color;
+    } else {
+      return p_font_glyph[y * _font_width + x] ? foreground_color : background_color;
+    }
+  };
+
   if (attributes.dwl) {
     switch (attributes.dhl) {
     case 0:
       // Double width
-      for (int i = 0; i < _font_height * _font_width; i++) {
-        const unsigned char color = *p_font_glyph++ ? foreground_color : background_color;
-        *p++ = color;
-        *p++ = color;
+      for (unsigned y = 0; y < _font_height; y++) {
+        for (unsigned x = 0; x < _font_width; x++) {
+          const unsigned char color = get_font_data(x, y);
+          *p++ = color;
+          *p++ = color;
+        }
       }
       break;
     case 1:
       // Double width and double height, top half
-      for (int y = 0; y < _font_height / 2; y++) {
-        for (int i = 0; i < 2; i++) {
-          for (int x = 0; x < _font_width; x++) {
-            const unsigned char color = p_font_glyph[y * _font_width + x] ? foreground_color : background_color;
+      for (unsigned y = 0; y < _font_height / 2; y++) {
+        for (unsigned i = 0; i < 2; i++) {
+          for (unsigned x = 0; x < _font_width; x++) {
+            const unsigned char color = get_font_data(x, y);
             *p++ = color;
             *p++ = color;
           }
@@ -235,10 +254,10 @@ Framebuffer::make_glyph(const unsigned char c,
       break;
     case 2:
       // Double width and double height, bottom half
-      for (int y = _font_height / 2; y < _font_height; y++) {
-        for (int i = 0; i < 2; i++) {
-          for (int x = 0; x < _font_width; x++) {
-            const unsigned char color = p_font_glyph[y * _font_width + x] ? foreground_color : background_color;
+      for (unsigned y = _font_height / 2; y < _font_height; y++) {
+        for (unsigned i = 0; i < 2; i++) {
+          for (unsigned x = 0; x < _font_width; x++) {
+            const unsigned char color = get_font_data(x, y);
             *p++ = color;
             *p++ = color;
           }
@@ -247,9 +266,12 @@ Framebuffer::make_glyph(const unsigned char c,
       break;
     }
   } else {
-    for (int i = 0; i < _font_height * _font_width; i++) {
-      *p++ = *p_font_glyph++ ? foreground_color : background_color;
-    }
+      for (unsigned y = 0; y < _font_height; y++) {
+        for (unsigned x = 0; x < _font_width; x++) {
+          const unsigned char color = get_font_data(x, y);
+          *p++ = color;
+        }
+      }
   }
   return glyph;
 }
@@ -320,7 +342,7 @@ Framebuffer::touch()
 void
 Framebuffer::handle_cursor()
 {
-  const unsigned blink_period = cursor_blink_freq * 100;
+  const unsigned blink_period = cursor_blink_freq * HZ;
   const bool blink_state = ((_timer->GetTicks() - _last_activity) % blink_period) < (blink_period / 2);
 
   if (_cursor_blink_state != blink_state) {
@@ -328,8 +350,8 @@ Framebuffer::handle_cursor()
     unsigned char* pfb = fb_pointer(_cursor_column * _font_width,
                                     _cursor_row * _font_height);
 
-    for (int y = 0; y < _font_height; y++) {
-      for (int x = 0; x < _font_width; x++) {
+    for (unsigned y = 0; y < _font_height; y++) {
+      for (unsigned x = 0; x < _font_width; x++) {
         if (blink_state) {
           pfb[x] = _cursor_color;
         } else {
@@ -343,3 +365,23 @@ Framebuffer::handle_cursor()
   }
 }
 
+void
+Framebuffer::handle_blinking()
+{
+  if ((_timer->GetTicks() % HZ) < (HZ / 2)) {
+    _framebuffer->SetPalette32(3, 0x808080);
+    _framebuffer->SetPalette32(4, 0xffffff);
+  } else {
+    _framebuffer->SetPalette32(3, 0x000000);
+    _framebuffer->SetPalette32(4, 0x000000);
+  }
+
+  _framebuffer->UpdatePalette();
+}
+
+void
+Framebuffer::process()
+{
+  handle_cursor();
+  handle_blinking();
+}

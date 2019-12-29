@@ -55,7 +55,7 @@ public:
                   unsigned int column,
                   __unused unsigned int visible);
 
-  void handle_cursor();
+  void process();
 
   void flush();
   void touch();
@@ -75,8 +75,8 @@ private:
   unsigned int _height;
   unsigned int _pitch;
 
-  int _font_height;
-  int _font_width;
+  unsigned int _font_height;
+  unsigned int _font_width;
   unsigned char* _font_data;
 
   const float cursor_blink_freq = 1.5;
@@ -88,6 +88,9 @@ private:
   unsigned int _last_activity;
 
   void set_xterm_colors();
+
+  void handle_cursor();
+  void handle_blinking();
 
   void save_cursor_content(unsigned int row,
                            unsigned int column);
