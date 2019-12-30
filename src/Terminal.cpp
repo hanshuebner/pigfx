@@ -35,7 +35,7 @@ term_output(const char* bytes, size_t length, void* terminal)
 Terminal::Terminal(CSerialDevice* serial_port)
   : Logging("Terminal"),
     _serial_port(serial_port),
-    _serial_speed(9600)
+    _serial_speed(38400)
 {
   _framebuffer = make_shared<Framebuffer>();
   _keyboard = make_shared<Keyboard>(this);
