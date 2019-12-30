@@ -9,15 +9,16 @@
 
 using namespace std;
 
+unsigned char Keyboard::_modifiers;
+unsigned char Keyboard::_keys[6];
 Keyboard* Keyboard::_this;
 
 void
 handle_report_stub(unsigned char modifiers,
-                   const unsigned char key_code[6])
+                   const unsigned char keys[6])
 {
-  if (Keyboard::_this) {
-    Keyboard::_this->handle_report(modifiers, key_code);
-  }
+  Keyboard::_modifiers = modifiers;
+  memcpy(Keyboard::_keys, keys, 6);
 }
 
 Keyboard::DeadKey Keyboard::dead_key;
@@ -97,6 +98,20 @@ Keyboard::handle_report(unsigned char modifiers,
     }
   }
   _keys_pressed = keys_pressed_now;
+}
+
+void
+Keyboard::process()
+{
+  unsigned char modifiers;
+  unsigned char keys[6];
+
+  EnterCritical();
+  modifiers = _modifiers;
+  memcpy(keys, _keys, 6);
+  LeaveCritical();
+
+  handle_report(modifiers, keys);
 }
 
 const string

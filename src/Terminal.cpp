@@ -177,6 +177,7 @@ Terminal::process()
   }
 
   _framebuffer->process();
+  _keyboard->process();
 }
 
 void

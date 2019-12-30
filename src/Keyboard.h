@@ -21,6 +21,8 @@ public:
 
   Terminal* terminal() const { return _terminal; }
 
+  void process();
+
 private:
   struct KeyDefinition;
   class KeypressHandler;
@@ -30,6 +32,9 @@ private:
   map<unsigned char, KeyDefinition*> _map;
   Terminal* _terminal;
   CUSBKeyboardDevice* _usb_keyboard;
+
+  static unsigned char _modifiers;
+  static unsigned char _keys[6];
 
   static Keyboard* _this;
 
