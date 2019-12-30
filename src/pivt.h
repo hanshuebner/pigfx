@@ -46,6 +46,9 @@ private:
   CTimer _timer;
   CLogger _logger;
   CUSBHCIDevice _usb_hci;
+  CEMMCDevice _emmc;
+  CFATFileSystem _file_system;
+
 
   Terminal* _terminal;
 
