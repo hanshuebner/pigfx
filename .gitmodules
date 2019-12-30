@@ -1,9 +1,9 @@
 [submodule "libvterm"]
 	path = libvterm
-	url = git@github.com:neovim/libvterm.git
+	url = git@github.com:hanshuebner/libvterm.git
 [submodule "lru-cache"]
 	path = lru-cache
 	url = git@github.com:goldsborough/lru-cache.git
 [submodule "circle-stdlib"]
 	path = circle-stdlib
-	url = https://github.com/smuehlst/circle-stdlib
+	url = https://github.com/hanshuebner/circle-stdlib

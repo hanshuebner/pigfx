@@ -20,6 +20,7 @@ PiVT::PiVT()
 {
   _interrupt.Initialize();
   _serial_device.Initialize(38400);
+  _serial_device.SetOptions(0);
 
   CDevice* logTarget = _device_name_service.GetDevice(_options.GetLogDevice(), false);
   if (logTarget == nullptr) {
