@@ -26,6 +26,12 @@ term_moverect(VTermRect dest, VTermRect src, void* terminal)
   return reinterpret_cast<Terminal*>(terminal)->moverect(dest, src);
 }
 
+static void
+term_output(const char* bytes, size_t length, void* terminal)
+{
+  return reinterpret_cast<Terminal*>(terminal)->uart_write(bytes, length);
+}
+
 Terminal::Terminal(CSerialDevice* serial_port)
   : Logging("Terminal"),
     _serial_port(serial_port),
@@ -40,6 +46,8 @@ Terminal::Terminal(CSerialDevice* serial_port)
   log(LogDebug, "Got %u rows %u columns", rows, columns);
 
   _term = vterm_new(rows, columns);
+
+  vterm_output_set_callback(_term, term_output, this);
 
   _screen = vterm_obtain_screen(_term);
 
@@ -107,6 +115,12 @@ void
 Terminal::uart_write(const string& s)
 {
   _serial_port->Write(s.c_str(), s.length());
+}
+
+void
+Terminal::uart_write(const char* s, size_t length)
+{
+  _serial_port->Write(s, length);
 }
 
 void

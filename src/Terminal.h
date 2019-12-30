@@ -28,6 +28,7 @@ class Terminal
   int moverect(VTermRect dest, VTermRect src);
 
   void uart_write(const string& s);
+  void uart_write(const char* s, size_t length);
   void uart_set_speed(unsigned speed);
 
   void display_status(const string& s);
