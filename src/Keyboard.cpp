@@ -106,6 +106,10 @@ Keyboard::process()
   unsigned char modifiers;
   unsigned char keys[6];
 
+  // Making this into a critical section is pretty heavy-handed.  It
+  // would be better to use an interrupt safe queue instead, but for
+  // now, this seems to work.
+
   EnterCritical();
   modifiers = _modifiers;
   memcpy(keys, _keys, 6);
