@@ -65,6 +65,13 @@ public:
   unsigned int font_width() const { return _font_width; }
   unsigned int font_height() const { return _font_height; }
 
+  struct ColorDefinitions {
+    uint32_t _background;
+    uint32_t _text;
+    uint32_t _bold;
+    uint32_t _cursor;
+  };
+
 private:
   CDMAChannel _channel;
   CTimer* _timer;
@@ -82,10 +89,21 @@ private:
   const float cursor_blink_freq = 1.5;
   unsigned int _cursor_row;
   unsigned int _cursor_column;
-  unsigned int _cursor_color;
   unsigned char _cursor_buffer[10 * 20];
   bool _cursor_blink_state;
+
+  ColorDefinitions _color_definitions;
+
   unsigned int _last_activity;
+
+  enum ColorIndex {
+                   background = 0,
+                   normal,
+                   bold,
+                   blinkNormal,
+                   blinkBold,
+                   cursor
+  };
 
   void set_xterm_colors();
 

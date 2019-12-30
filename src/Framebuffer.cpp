@@ -99,12 +99,11 @@ Framebuffer::Framebuffer(unsigned int width,
      _font_width(10),
      _cursor_row(0),
      _cursor_column(0),
-     _cursor_color(9),
      _cursor_blink_state(true),
+     _color_definitions({ 0x000000, 0x808080, 0xffffff, 0x0000ff }),
+     _last_activity(_timer->GetTicks()),
      _glyph_cache(GLYPH_CACHE_SIZE)
 {
-  _last_activity = _timer->GetTicks();
-
   _framebuffer = new CBcmFrameBuffer(width, height, 8);
   if (!_framebuffer->Initialize()) {
     log(LogError, "Framebuffer initialization failed");
@@ -125,11 +124,12 @@ Framebuffer::Framebuffer(unsigned int width,
 
   _glyph_cache.monitor();
 
-  _framebuffer->SetPalette32(0, 0x000000);
-  _framebuffer->SetPalette32(1, 0x808080);
-  _framebuffer->SetPalette32(2, 0xffffff);
-  _framebuffer->SetPalette32(3, 0x808080);
-  _framebuffer->SetPalette32(4, 0xffffff);
+  _framebuffer->SetPalette32(ColorIndex::background, _color_definitions._background);
+  _framebuffer->SetPalette32(ColorIndex::normal, _color_definitions._text);
+  _framebuffer->SetPalette32(ColorIndex::bold, _color_definitions._bold);
+  _framebuffer->SetPalette32(ColorIndex::blinkNormal, _color_definitions._text);
+  _framebuffer->SetPalette32(ColorIndex::blinkBold, _color_definitions._bold);
+  _framebuffer->SetPalette32(ColorIndex::cursor, _color_definitions._cursor);
 
   _framebuffer->UpdatePalette();
 }
@@ -353,7 +353,7 @@ Framebuffer::handle_cursor()
     for (unsigned y = 0; y < _font_height; y++) {
       for (unsigned x = 0; x < _font_width; x++) {
         if (blink_state) {
-          pfb[x] = _cursor_color;
+          pfb[x] = ColorIndex::cursor;
         } else {
           pfb[x] = *pb++;
         }
@@ -369,11 +369,11 @@ void
 Framebuffer::handle_blinking()
 {
   if ((_timer->GetTicks() % HZ) < (HZ / 2)) {
-    _framebuffer->SetPalette32(3, 0x808080);
-    _framebuffer->SetPalette32(4, 0xffffff);
+    _framebuffer->SetPalette32(3, _color_definitions._text);
+    _framebuffer->SetPalette32(4, _color_definitions._bold);
   } else {
-    _framebuffer->SetPalette32(3, 0x000000);
-    _framebuffer->SetPalette32(4, 0x000000);
+    _framebuffer->SetPalette32(3, _color_definitions._background);
+    _framebuffer->SetPalette32(4, _color_definitions._background);
   }
 
   _framebuffer->UpdatePalette();
