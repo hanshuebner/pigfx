@@ -28,8 +28,6 @@ public:
   Framebuffer(unsigned int width = 800,
               unsigned int height = 600);
 
-  void clear(GFX_COL background_color);
-
   void putc(const unsigned row,
             const unsigned column,
             const unsigned char c,
@@ -45,26 +43,20 @@ public:
                  unsigned int columns,
                  GFX_COL background_color);
 
-  void fill_rect(unsigned int x,
-                 unsigned int y,
-                 unsigned int width,
-                 unsigned int height,
-                 GFX_COL color);
+  void restore_cursor() { _cursor->restore(); }
 
   void set_cursor(unsigned int row,
                   unsigned int column,
-                  unsigned int visible,
+                  bool visible,
                   bool double_width);
 
   void process();
 
-  void flush();
-  void touch();
-
   unsigned int width() const { return _width; }
   unsigned int height() const { return _height; }
-  unsigned int font_width() const { return _font_width; }
-  unsigned int font_height() const { return _font_height; }
+  unsigned int pitch() const { return _pitch; }
+  static unsigned int font_width() { return 10; }
+  static unsigned int font_height() { return 20; }
 
   struct ColorDefinitions {
     uint32_t _background;
@@ -74,30 +66,65 @@ public:
   };
 
 private:
+
+  class Cursor {
+  public:
+    Cursor(Framebuffer* framebuffer, CTimer* timer);
+
+    void process();
+
+    void restore();
+
+    void set(unsigned row, unsigned column, bool visible, bool double_width);
+
+  private:
+    const float _blink_freq = 1.5;
+
+    Framebuffer* _framebuffer;
+    CTimer* _timer;
+    unsigned int _last_activity;
+    unsigned int _row;
+    unsigned int _column;
+    bool _visible;
+    bool _double_width;
+    uint8_t* _buffer;
+
+    bool _blink_state;
+
+    uint8_t* fb_pointer();
+  };
+
+  struct Glyph
+  {
+    Glyph(const unsigned char c,
+          const GFX_COL foreground_color,
+          const GFX_COL background_color,
+          const VTermScreenCellAttrs attributes);
+    Glyph(Framebuffer& framebuffer,
+          unsigned row,
+          unsigned column,
+          bool double_width);
+    ~Glyph() { delete _data; }
+
+    unsigned int _width;
+    unsigned int _height;
+    unsigned char* _data;
+  };
+
   CDMAChannel _channel;
   CTimer* _timer;
   CBcmFrameBuffer* _framebuffer;
+
+  Cursor* _cursor;
 
   unsigned char* _pfb;
   unsigned int _width;
   unsigned int _height;
   unsigned int _pitch;
 
-  unsigned int _font_height;
-  unsigned int _font_width;
   unsigned char* _font_data;
 
-  const float cursor_blink_freq = 1.5;
-  unsigned int _cursor_row;
-  unsigned int _cursor_column;
-  unsigned char _cursor_buffer[20 * 20];
-  bool _cursor_visible;
-  bool _cursor_double_width;
-  bool _cursor_blink_state;
-
   ColorDefinitions _color_definitions;
-
-  unsigned int _last_activity;
 
   enum ColorIndex {
                    background = 0,
@@ -108,41 +135,15 @@ private:
                    cursor
   };
 
+  void flush();
+
   void set_xterm_colors();
 
-  void handle_cursor();
   void handle_blinking();
 
-  void save_cursor_content(unsigned int row,
-                           unsigned int column);
-  void restore_cursor_content(unsigned int row,
-                              unsigned int column);
-
-  void scroll_up(unsigned int start_line,
-                 unsigned int end_line,
-                 unsigned int lines,
-                 GFX_COL background_color);
-  void scroll_down(unsigned int start_line,
-                   unsigned int end_line,
-                   unsigned int lines,
-                   GFX_COL background_color);
-
-  unsigned char* fb_pointer(unsigned x, unsigned y) { return _pfb + y * _pitch + x; }
-
-  struct Glyph
-  {
-    Glyph(unsigned int width, unsigned int height);
-    ~Glyph() { delete _data; }
-    unsigned int _width;
-    unsigned int _height;
-    unsigned char* _data;
-  };
+  uint8_t* fb_pointer(unsigned x, unsigned y) { return _pfb + y * _pitch + x; }
 
   using GlyphKey = tuple<char, GFX_COL, GFX_COL, unsigned long>;
-  shared_ptr<Glyph> make_glyph(const unsigned char c,
-                               const GFX_COL foreground_color,
-                               const GFX_COL background_color,
-                               const VTermScreenCellAttrs attributes);
   shared_ptr<Glyph> get_glyph(const unsigned char c,
                               const GFX_COL foreground_color,
                               const GFX_COL background_color,

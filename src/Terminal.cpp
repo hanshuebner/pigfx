@@ -66,6 +66,8 @@ Terminal::Terminal(CSerialDevice* serial_port)
 int
 Terminal::damage(VTermRect rect)
 {
+  _framebuffer->restore_cursor();
+
   VTermPos pos;
   for (pos.row = rect.start_row; pos.row < rect.end_row; pos.row++) {
     for (pos.col = rect.start_col; pos.col < rect.end_col; pos.col++) {
@@ -78,7 +80,6 @@ Terminal::damage(VTermRect rect)
     }
   }
 
-  _framebuffer->flush();
   return 1;
 }
 
@@ -176,7 +177,6 @@ Terminal::process()
   int serial_bytes_available = _serial_port->Read(buf, sizeof buf);
   if (serial_bytes_available > 0) {
     vterm_input_write(_term, buf, serial_bytes_available);
-    _framebuffer->touch();
   } else if (serial_bytes_available < 0) {
     switch (serial_bytes_available) {
     case -SERIAL_ERROR_BREAK:
