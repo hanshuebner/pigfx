@@ -53,7 +53,8 @@ public:
 
   void set_cursor(unsigned int row,
                   unsigned int column,
-                  __unused unsigned int visible);
+                  unsigned int visible,
+                  bool double_width);
 
   void process();
 
@@ -89,7 +90,9 @@ private:
   const float cursor_blink_freq = 1.5;
   unsigned int _cursor_row;
   unsigned int _cursor_column;
-  unsigned char _cursor_buffer[10 * 20];
+  unsigned char _cursor_buffer[20 * 20];
+  bool _cursor_visible;
+  bool _cursor_double_width;
   bool _cursor_blink_state;
 
   ColorDefinitions _color_definitions;

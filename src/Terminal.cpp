@@ -85,7 +85,10 @@ Terminal::damage(VTermRect rect)
 int
 Terminal::movecursor(VTermPos position, __unused VTermPos oldPosition, int visible)
 {
-  _framebuffer->set_cursor(position.row, position.col, visible);
+  auto term_state = vterm_obtain_state(_term);
+  auto lineinfo = vterm_state_get_lineinfo(term_state, position.row);
+  _framebuffer->set_cursor(position.row, position.col,
+                           visible, lineinfo->doublewidth);
   return 1;
 }
 

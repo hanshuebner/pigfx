@@ -99,6 +99,8 @@ Framebuffer::Framebuffer(unsigned int width,
      _font_width(10),
      _cursor_row(0),
      _cursor_column(0),
+     _cursor_visible(true),
+     _cursor_double_width(false),
      _cursor_blink_state(true),
      _color_definitions({ 0x000000, 0x808080, 0xffffff, 0x0000ff }),
      _last_activity(_timer->GetTicks()),
@@ -139,13 +141,14 @@ Framebuffer::save_cursor_content(unsigned int row,
                                  unsigned int column)
 {
   // Save framebuffer content that is going to be replaced by the cursor
+  log(LogDebug, "save_cursor_content row %d double width %d", row, _cursor_double_width);
 
   unsigned char* pb = _cursor_buffer;
-  unsigned char* pfb = fb_pointer(column * _font_width,
+  unsigned char* pfb = fb_pointer(column * _font_width * (_cursor_double_width ? 2 : 1),
                                   row * _font_height);
 
   for (unsigned int y = 0; y < _font_height; y++) {
-    for (unsigned int x = 0; x < _font_width; x++) {
+    for (unsigned int x = 0; x < _font_width * (_cursor_double_width ? 2 : 1); x++) {
       *pb++ = pfb[x];
     }
     pfb += _pitch;
@@ -156,13 +159,15 @@ void
 Framebuffer::restore_cursor_content(unsigned int row,
                                     unsigned int column)
 {
+  log(LogDebug, "restore_cursor_content row %d double width %d", row, _cursor_double_width);
+
   // Restore framebuffer content that was overwritten by the cursor
   unsigned char* pb = _cursor_buffer;
-  unsigned char* pfb = fb_pointer(column * _font_width,
+  unsigned char* pfb = fb_pointer(column * _font_width * (_cursor_double_width ? 2 : 1),
                                   row * _font_height);
 
   for (unsigned int y = 0; y < _font_height; y++) {
-    for (unsigned int x = 0; x < _font_width; x++) {
+    for (unsigned int x = 0; x < _font_width * (_cursor_double_width ? 2 : 1); x++) {
       pfb[x] = *pb++;
     }
     pfb += _pitch;
@@ -324,11 +329,14 @@ Framebuffer::putc(const unsigned row,
 void
 Framebuffer::set_cursor(unsigned int row,
                         unsigned int column,
-                        __unused unsigned int visible)
+                        unsigned int visible,
+                        bool double_width)
 {
   restore_cursor_content(_cursor_row, _cursor_column);
   _cursor_row = row;
   _cursor_column = column;
+  _cursor_visible = visible;
+  _cursor_double_width = double_width;
   save_cursor_content(row, column);
 }
 
@@ -347,12 +355,12 @@ Framebuffer::handle_cursor()
 
   if (_cursor_blink_state != blink_state) {
     unsigned char* pb = _cursor_buffer;
-    unsigned char* pfb = fb_pointer(_cursor_column * _font_width,
+    unsigned char* pfb = fb_pointer(_cursor_column * _font_width * (_cursor_double_width ? 2 : 1),
                                     _cursor_row * _font_height);
 
     for (unsigned y = 0; y < _font_height; y++) {
-      for (unsigned x = 0; x < _font_width; x++) {
-        if (blink_state) {
+      for (unsigned x = 0; x < _font_width * (_cursor_double_width ? 2 : 1); x++) {
+        if (blink_state && _cursor_visible) {
           pfb[x] = ColorIndex::cursor;
         } else {
           pfb[x] = *pb++;
