@@ -66,7 +66,7 @@ Terminal::Terminal(CSerialDevice* serial_port)
 int
 Terminal::damage(VTermRect rect)
 {
-  _framebuffer->restore_cursor();
+  _framebuffer->remove_cursor();
 
   VTermPos pos;
   for (pos.row = rect.start_row; pos.row < rect.end_row; pos.row++) {

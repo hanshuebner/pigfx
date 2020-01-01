@@ -19,7 +19,7 @@
 
 using namespace std;
 
-using GFX_COL = unsigned char;
+using GFX_COL = uint8_t;
 
 class Framebuffer
   : protected Logging
@@ -43,7 +43,7 @@ public:
                  unsigned int columns,
                  GFX_COL background_color);
 
-  void restore_cursor() { _cursor->restore(); }
+  void remove_cursor() { _cursor.remove_from_screen(); }
 
   void set_cursor(unsigned int row,
                   unsigned int column,
@@ -73,7 +73,7 @@ private:
 
     void process();
 
-    void restore();
+    void remove_from_screen();
 
     void set(unsigned row, unsigned column, bool visible, bool double_width);
 
@@ -100,29 +100,25 @@ private:
           const GFX_COL foreground_color,
           const GFX_COL background_color,
           const VTermScreenCellAttrs attributes);
-    Glyph(Framebuffer& framebuffer,
-          unsigned row,
-          unsigned column,
-          bool double_width);
     ~Glyph() { delete _data; }
 
     unsigned int _width;
     unsigned int _height;
-    unsigned char* _data;
+    uint8_t* _data;
   };
 
   CDMAChannel _channel;
   CTimer* _timer;
   CBcmFrameBuffer* _framebuffer;
 
-  Cursor* _cursor;
+  Cursor _cursor;
 
-  unsigned char* _pfb;
+  uint8_t* _pfb;
   unsigned int _width;
   unsigned int _height;
   unsigned int _pitch;
 
-  unsigned char* _font_data;
+  uint8_t* _font_data;
 
   ColorDefinitions _color_definitions;
 

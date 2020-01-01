@@ -12,7 +12,7 @@
 
 using namespace std;
 
-unsigned char G_FONT_GLYPHS[] = {
+uint8_t G_FONT_GLYPHS[] = {
 #include "font.inc"
 };
 
@@ -27,7 +27,7 @@ public:
   ColorBuffer(GFX_COL color) {
     memset(_buf, color, sizeof(_buf));
   }
-  const unsigned char* bytes() const { return (unsigned char*) _buf; }
+  const uint8_t* bytes() const { return (uint8_t*) _buf; }
 
 private:
   char _buf[4];
@@ -95,6 +95,7 @@ Framebuffer::Framebuffer(unsigned int width,
   :  Logging("Framebuffer"),
      _channel(DMA_CHANNEL_NORMAL),
      _timer(CTimer::Get()),
+     _cursor(this, _timer),
      _color_definitions({ 0x000000, 0x808080, 0xffffff, 0x0000ff }),
      _glyph_cache(GLYPH_CACHE_SIZE)
 {
@@ -114,7 +115,7 @@ Framebuffer::Framebuffer(unsigned int width,
       "Framebuffer initialized, _width=%u _height=%u lines=%u border_top_bottom=%u _pitch=%u",
       _width, _height, lines, border_top_bottom, _pitch);
 
-  _pfb = reinterpret_cast<unsigned char*>(_framebuffer->GetBuffer() + (border_top_bottom * _pitch));
+  _pfb = reinterpret_cast<uint8_t*>(_framebuffer->GetBuffer() + (border_top_bottom * _pitch));
 
   _glyph_cache.monitor();
 
@@ -137,7 +138,7 @@ Framebuffer::move_rect(unsigned int from_row,
                        unsigned int columns,
                        __unused GFX_COL background_color)
 {
-  _cursor->restore();
+  _cursor.remove_from_screen();
   unsigned int width = columns * font_width();
   unsigned int height = rows * font_height();
 
@@ -163,7 +164,7 @@ Framebuffer::Glyph::Glyph(const unsigned char c,
   _width = font_width * (attributes.dwl ? 2 : 1);
   _height = font_height;
 
-  _data = new unsigned char[_width * _height];
+  _data = new uint8_t[_width * _height];
 
   GFX_COL foreground_color = attributes.bold ? ColorIndex::bold : (attributes.conceal ? ColorIndex::background : ColorIndex::normal);
   if (attributes.blink && !attributes.conceal) {
@@ -174,8 +175,8 @@ Framebuffer::Glyph::Glyph(const unsigned char c,
     swap(foreground_color, background_color);
   }
 
-  unsigned char* p_font_glyph = G_FONT_GLYPHS + c * font_width * font_height;
-  unsigned char* p = _data;
+  uint8_t* p_font_glyph = G_FONT_GLYPHS + c * font_width * font_height;
+  uint8_t* p = _data;
 
   auto get_font_data = [=](unsigned x, unsigned y) {
     if (attributes.underline && y == (font_height - 1)) {
@@ -191,7 +192,7 @@ Framebuffer::Glyph::Glyph(const unsigned char c,
       // Double width
       for (unsigned y = 0; y < font_height; y++) {
         for (unsigned x = 0; x < font_width; x++) {
-          const unsigned char color = get_font_data(x, y);
+          const uint8_t color = get_font_data(x, y);
           *p++ = color;
           *p++ = color;
         }
@@ -202,7 +203,7 @@ Framebuffer::Glyph::Glyph(const unsigned char c,
       for (unsigned y = 0; y < font_height / 2; y++) {
         for (unsigned i = 0; i < 2; i++) {
           for (unsigned x = 0; x < font_width; x++) {
-            const unsigned char color = get_font_data(x, y);
+            const uint8_t color = get_font_data(x, y);
             *p++ = color;
             *p++ = color;
           }
@@ -214,7 +215,7 @@ Framebuffer::Glyph::Glyph(const unsigned char c,
       for (unsigned y = font_height / 2; y < font_height; y++) {
         for (unsigned i = 0; i < 2; i++) {
           for (unsigned x = 0; x < font_width; x++) {
-            const unsigned char color = get_font_data(x, y);
+            const uint8_t color = get_font_data(x, y);
             *p++ = color;
             *p++ = color;
           }
@@ -225,33 +226,10 @@ Framebuffer::Glyph::Glyph(const unsigned char c,
   } else {
       for (unsigned y = 0; y < font_height; y++) {
         for (unsigned x = 0; x < font_width; x++) {
-          const unsigned char color = get_font_data(x, y);
+          const uint8_t color = get_font_data(x, y);
           *p++ = color;
         }
       }
-  }
-}
-
-Framebuffer::Glyph::Glyph(Framebuffer& framebuffer,
-                          unsigned row,
-                          unsigned column,
-                          bool double_width)
-{
-  const unsigned font_width = Framebuffer::font_width();
-  const unsigned font_height = Framebuffer::font_height();
-
-  _width = font_width * (double_width ? 2 : 1);
-  _height = font_height;
-  _data = new unsigned char[_width * _height];
-
-  unsigned char* pb = _data;
-
-  for (unsigned int y = 0; y < font_height; y++) {
-    unsigned char* pfb = framebuffer.fb_pointer(column * _width,
-                                                row * _height + y);
-    for (unsigned int x = 0; x < _width; x++) {
-      *pb++ = pfb[x];
-    }
   }
 }
 
@@ -290,10 +268,10 @@ Framebuffer::putc(const unsigned row,
   GFX_COL background_color_index = ColorIndex::background;
   shared_ptr<Glyph> glyph = get_glyph(c, foreground_color_index, background_color_index, attributes);
 
-  _channel.SetupMemCopy2D(fb_pointer(column * glyph->_width, row * font_height()),
+  _channel.SetupMemCopy2D(fb_pointer(column * glyph->_width, row * glyph->_height),
                           glyph->_data,
                           glyph->_width,
-                          font_height(),
+                          glyph->_height,
                           _pitch - glyph->_width);
   flush();
 }
@@ -304,7 +282,7 @@ Framebuffer::set_cursor(unsigned int row,
                         bool visible,
                         bool double_width)
 {
-  _cursor->set(row, column, visible, double_width);
+  _cursor.set(row, column, visible, double_width);
 }
 
 void
@@ -324,7 +302,7 @@ Framebuffer::handle_blinking()
 void
 Framebuffer::process()
 {
-  _cursor->process();
+  _cursor.process();
   handle_blinking();
 }
 
@@ -344,20 +322,22 @@ Framebuffer::Cursor::Cursor(Framebuffer* framebuffer, CTimer* timer)
 uint8_t*
 Framebuffer::Cursor::fb_pointer()
 {
-  return _framebuffer->fb_pointer(_column * font_width() * (_double_width ? 2 : 1),
-                                  _row * font_height());
+  return _framebuffer->fb_pointer(_column * Framebuffer::font_width() * (_double_width ? 2 : 1),
+                                  _row * Framebuffer::font_height());
 }
 
 void
 Framebuffer::Cursor::set(unsigned row, unsigned column, bool visible, bool double_width)
 {
-  restore();
+  remove_from_screen();
 
   _last_activity = _timer->GetTicks();
   _row = row;
   _column = column;
   _visible = visible;
   _double_width = double_width;
+
+  _framebuffer->log(LogDebug, "Set cursor to %d/%d (visible %d double_width %d)", row, column, visible, double_width);
 }
 
 void
@@ -367,11 +347,13 @@ Framebuffer::Cursor::process()
   const bool blink_state = ((_timer->GetTicks() - _last_activity) % blink_period) < (blink_period / 2);
 
   if (_blink_state != blink_state) {
-    unsigned char* pb = _buffer;
-    unsigned char* pfb = fb_pointer();
+    _framebuffer->log(LogDebug, "Cursor %d/%d blink state changed to %d", _row, _column, blink_state);
 
-    for (unsigned y = 0; y < font_height(); y++) {
-      for (unsigned x = 0; x < font_width() * (_double_width ? 2 : 1); x++) {
+    uint8_t* pb = _buffer;
+    uint8_t* pfb = fb_pointer();
+
+    for (unsigned y = 0; y < Framebuffer::font_height(); y++) {
+      for (unsigned x = 0; x < Framebuffer::font_width() * (_double_width ? 2 : 1); x++) {
         if (blink_state && _visible) {
           *pb++ = pfb[x];
           pfb[x] = ColorIndex::cursor;
@@ -387,14 +369,14 @@ Framebuffer::Cursor::process()
 }
 
 void
-Framebuffer::Cursor::restore()
+Framebuffer::Cursor::remove_from_screen()
 {
-  unsigned char* pb = _buffer;
-  unsigned char* pfb = fb_pointer();
+  uint8_t* pb = _buffer;
+  uint8_t* pfb = fb_pointer();
 
   if (_blink_state && _visible) {
-    for (unsigned y = 0; y < font_height(); y++) {
-      for (unsigned x = 0; x < font_width() * (_double_width ? 2 : 1); x++) {
+    for (unsigned y = 0; y < Framebuffer::font_height(); y++) {
+      for (unsigned x = 0; x < Framebuffer::font_width() * (_double_width ? 2 : 1); x++) {
         pfb[x] = *pb++;
       }
       pfb += _framebuffer->pitch();
